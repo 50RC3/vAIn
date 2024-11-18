@@ -1,0 +1,164 @@
+version: '3.8'
+
+services:
+  # Core Service: Symbolic Reasoning (for logical decision-making)
+  symbolic_reasoning:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: symbolic_reasoning
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python core/symbolic_reasoning.py  # Command for logical reasoning processing
+    ports:
+      - "5000:5000"  # Exposes symbolic reasoning API (if needed for external integration)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]  # Health check endpoint for monitoring service status
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Core Service: Federated Learning (for decentralized AI model training)
+  federated_learning:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: federated_learning
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python core/federated_learning.py  # Command for federated learning model training
+    restart: unless-stopped
+
+  # Core Service: Memory Management (Handles Semantic/Episodic Memory)
+  memory_management:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: memory_management
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python core/memory/memory_controller.py  # Command to manage and store memory
+    restart: unless-stopped
+
+  # Backend API: FastAPI service for orchestrating and exposing AI functionalities
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vAIn_api
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: uvicorn services/api.main:app --host 0.0.0.0 --port 8000  # Start FastAPI app
+    ports:
+      - "8000:8000"  # Exposes FastAPI REST API for AI interactions and other services
+    depends_on:
+      - symbolic_reasoning
+      - federated_learning
+      - memory_management
+    restart: unless-stopped
+
+  # Database Service: Neo4j for graph-based data storage (supports complex relationships)
+  db_neo4j:
+    image: neo4j:latest
+    container_name: neo4j_db
+    environment:
+      - NEO4J_AUTH=neo4j/password  # Default Neo4j authentication (set securely in production)
+    volumes:
+      - neo4j_data:/var/lib/neo4j/data
+    ports:
+      - "7474:7474"  # HTTP access to Neo4j browser interface
+      - "7687:7687"  # Bolt protocol access for application interaction
+    networks:
+      - reasoning_network
+    restart: unless-stopped
+
+  # Redis for caching frequently accessed data (improves response time)
+  redis:
+    image: redis:latest
+    container_name: redis_cache
+    ports:
+      - "6379:6379"  # Exposed port for Redis interactions
+    networks:
+      - reasoning_network
+    restart: unless-stopped
+
+  # Peer-to-Peer Networking (for distributed interactions within vAIn)
+  p2p_network:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: p2p_network
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python services/p2p/network.py  # P2P communication for decentralized tasks
+    ports:
+      - "9000:9000"  # Optional for P2P communication (used for internal networking or distributed processing)
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Frontend Service: React or Vue.js (UI for interacting with the API and users)
+  frontend:
+    build:
+      context: ./frontend  # Path to frontend directory (React/Vue.js app)
+    container_name: vAIn_frontend
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"  # Exposes the frontend for user interaction
+    restart: unless-stopped
+    depends_on:
+      - api  # Ensures backend API is ready before frontend starts
+
+  # Optional: Test Database (Isolated testing environment with Postgres)
+  db_test:
+    image: postgres:latest
+    container_name: postgres_test_db
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: test_db
+    ports:
+      - "5432:5432"  # Exposed port for database access during testing
+    networks:
+      - reasoning_network
+    restart: unless-stopped
+
+  # Optional: Elasticsearch for advanced text search functionality
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: es_search
+    environment:
+      - discovery.type=single-node  # Elasticsearch single-node setup
+    ports:
+      - "9200:9200"  # Exposed port for Elasticsearch REST API access
+    networks:
+      - reasoning_network
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+  redis_cache:
+  db_data:
+
+networks:
+  reasoning_network:
+    driver: bridge  # Virtual network for services to communicate internally

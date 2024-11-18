@@ -1,0 +1,75 @@
+# Database Configuration for vAIn Project
+
+default:
+  db_engine: postgresql            # Primary database engine (e.g., postgresql, mysql, sqlite)
+  db_name: vain_db                 # Name of the primary database
+  username: vain_admin             # Database user with required permissions
+  password: secure_password_here   # Strong, secure password for the user
+  host: localhost                  # Host address for the database
+  port: 5432                       # Default PostgreSQL port
+  pool_size: 10                    # Maximum number of connections in the pool
+  timeout: 30                      # Connection timeout in seconds
+  ssl:
+    enabled: true                  # Enable SSL for secure connections
+    ca_cert_path: ./configs/ssl/ca.pem
+
+# Replica Configuration (For read-heavy workloads)
+replicas:
+  - db_name: vain_replica_1
+    host: replica1.vain.local
+    port: 5432
+    pool_size: 5
+    load_balancer_weight: 0.5      # Weight for load balancing
+  - db_name: vain_replica_2
+    host: replica2.vain.local
+    port: 5432
+    pool_size: 5
+    load_balancer_weight: 0.5
+
+# Memory Database (For cache or temporary data)
+memory_db:
+  db_engine: redis
+  host: localhost
+  port: 6379
+  db_index: 0                      # Redis database index
+  password: redis_secure_password
+  max_connections: 100
+  ttl: 3600                        # Time-to-live for cached data (in seconds)
+
+# Backup Configuration
+backup:
+  enabled: true
+  schedule: daily                  # Backup frequency (e.g., daily, weekly)
+  time: "02:00"                    # Backup time in HH:MM format
+  location: ./backups/             # Directory for storing backups
+  encryption:
+    enabled: true
+    encryption_key: ./configs/keys/backup_encryption_key.pem
+  retention:
+    days: 30                       # Retain backups for 30 days
+
+# Logging for DB Operations
+logging:
+  enabled: true
+  log_file: ./logs/db_operations.log
+  log_level: DEBUG                 # DEBUG, INFO, WARNING, ERROR
+  query_time_threshold: 1000       # Log queries taking more than 1000ms
+
+# Migration Configuration
+migrations:
+  tool: alembic                    # Database migration tool
+  migrations_folder: ./migrations/ # Directory for migration scripts
+
+# Testing Database (For Development and CI)
+testing:
+  db_engine: sqlite
+  db_name: vain_test.db
+  in_memory: true                  # Use in-memory database for testing
+  verbose: true                    # Enable verbose output during tests
+
+# Advanced Options
+advanced:
+  max_query_length: 5000           # Maximum length of a query to log
+  autocommit: true                 # Enable autocommit for transactions
+  reconnect_attempts: 3            # Number of retries if a connection fails
+  reconnect_interval: 5            # Seconds between reconnect attempts

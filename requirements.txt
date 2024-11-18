@@ -1,0 +1,86 @@
+# FastAPI for building the web application
+fastapi==0.102.0
+
+# Uvicorn for serving the FastAPI application
+uvicorn==0.23.0
+
+# WebSocket support
+websockets==11.0.3
+
+# Pydantic for data validation and settings management
+pydantic==2.5.1
+
+# AsyncIO for asynchronous programming (for web sockets and async operations)
+asyncio==3.4.3
+
+# Requests for making HTTP requests to external services (e.g., performance monitoring)
+requests==2.31.0
+
+# Matplotlib for creating visualizations such as charts and graphs (if needed)
+matplotlib==3.8.0
+
+# Numpy for numerical operations (useful for performance metrics and calculations)
+numpy==1.26.0
+
+# Celery for asynchronous task queue (optional, if you plan to scale task processing)
+celery==5.3.0
+
+# Redis as a message broker for Celery or caching purposes (if using Celery)
+redis==4.3.0
+
+# SQLAlchemy for ORM support and interacting with databases (if you need database management)
+sqlalchemy==2.0.20
+
+# Databases library for asynchronous database support (if using a database)
+databases==0.7.2
+
+# Psycopg2 for PostgreSQL database support (if using PostgreSQL as the DB)
+psycopg2==2.9.7
+
+# Loguru for advanced logging capabilities
+loguru==0.7.0
+
+# Gunicorn for serving the application in production (optional, if not using Uvicorn directly)
+gunicorn==20.2.0
+
+# FastAPI dependency injection support for building complex dependency graphs
+fastapi-utils==0.2.1
+
+# Pytest for unit testing and integration testing
+pytest==7.5.2
+
+# Pytest-asyncio for testing asynchronous code with Pytest
+pytest-asyncio==0.21.0
+
+# Coverage for test coverage reporting
+coverage==6.7.1
+
+# Alembic for database migrations (if using SQLAlchemy)
+alembic==1.11.1
+
+# Sendgrid for email notifications (optional, if integrating email)
+sendgrid==6.9.1
+
+# Sentry SDK for error tracking and monitoring (optional, if integrating error tracking)
+sentry-sdk==2.15.0
+
+# Prometheus client for metrics and system performance tracking (optional, for monitoring)
+prometheus-client==0.16.0
+
+# Redis-py for Redis cache or message broker interaction
+redis-py==4.4.1
+
+# Docker SDK for Python if interacting with Docker containers programmatically
+docker==6.0.1
+
+# FastAPI dependency for security
+fastapi-security==1.0.0
+
+# Asyncpg for PostgreSQL support in an async environment (alternative to psycopg2)
+asyncpg==0.28.0
+
+# Jinja2 for templating (optional, if you need HTML templating)
+jinja2==3.1.2
+
+# Pillow for image processing (optional, if generating or processing images)
+pillow==9.4.0

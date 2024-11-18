@@ -1,0 +1,126 @@
+# Logging Configuration for vAIn Project
+
+version: 1
+disable_existing_loggers: false
+
+# Log Formatting
+formatters:
+  detailed:
+    format: "[%(asctime)s] [%(name)s] [%(levelname)s] - %(message)s"
+  concise:
+    format: "[%(levelname)s] %(message)s"
+  json:
+    format: |
+      {
+        "timestamp": "%(asctime)s",
+        "name": "%(name)s",
+        "level": "%(levelname)s",
+        "message": "%(message)s",
+        "module": "%(module)s",
+        "filename": "%(filename)s",
+        "line": "%(lineno)d"
+      }
+
+# Handlers
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: detailed
+    stream: ext://sys.stdout
+
+  file_debug:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: ./logs/vain_debug.log
+    maxBytes: 10MB
+    backupCount: 5
+    encoding: utf-8
+
+  file_error:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: ./logs/vain_errors.log
+    maxBytes: 10MB
+    backupCount: 5
+    encoding: utf-8
+
+  json_file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: json
+    filename: ./logs/vain_logs.json
+    maxBytes: 15MB
+    backupCount: 3
+    encoding: utf-8
+
+  memory_monitor:
+    class: logging.handlers.TimedRotatingFileHandler
+    level: WARNING
+    formatter: detailed
+    filename: ./logs/memory_monitor.log
+    when: midnight
+    interval: 1
+    backupCount: 7
+    encoding: utf-8
+
+# Loggers
+loggers:
+  root:
+    level: DEBUG
+    handlers:
+      - console
+      - file_debug
+      - file_error
+
+  vain.rl:
+    level: DEBUG
+    handlers:
+      - console
+      - file_debug
+    propagate: false
+
+  vain.memory:
+    level: INFO
+    handlers:
+      - json_file
+      - memory_monitor
+    propagate: false
+
+  vain.adaptation:
+    level: DEBUG
+    handlers:
+      - console
+      - file_debug
+    propagate: false
+
+  vain.testing:
+    level: WARNING
+    handlers:
+      - console
+      - file_error
+    propagate: false
+
+  vain.performance:
+    level: INFO
+    handlers:
+      - json_file
+    propagate: false
+
+# Root Logger (Fallback)
+root:
+  level: WARNING
+  handlers:
+    - console
+
+# Global Settings
+global_settings:
+  log_level: DEBUG
+  rotation_policy:
+    max_file_size: 10MB
+    max_backup_count: 5
+  retention_policy:
+    max_retention_days: 30
+  time_format: "%Y-%m-%d %H:%M:%S"

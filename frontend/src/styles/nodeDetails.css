@@ -1,0 +1,27 @@
+/* frontend/src/styles/nodeDetails.css */
+
+.node-details {
+  border: 1px solid #ccc;
+  padding: 20px;
+  margin: 20px 0;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.node-details h2 {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.node-details div {
+  margin-bottom: 10px;
+}
+
+.node-details ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.node-details li {
+  padding: 5px 0;
+}

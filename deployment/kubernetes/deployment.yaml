@@ -1,0 +1,370 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: symbolic-reasoning-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: symbolic-reasoning
+  template:
+    metadata:
+      labels:
+        app: symbolic-reasoning
+    spec:
+      containers:
+      - name: symbolic-reasoning
+        image: your-docker-image/symbolic-reasoning:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - mountPath: /app
+          name: app-volume
+        command: ["python", "core/symbolic_reasoning.py"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: federated-learning-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: federated-learning
+  template:
+    metadata:
+      labels:
+        app: federated-learning
+    spec:
+      containers:
+      - name: federated-learning
+        image: your-docker-image/federated-learning:latest
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - mountPath: /app
+          name: app-volume
+        command: ["python", "core/federated_learning.py"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-management-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory-management
+  template:
+    metadata:
+      labels:
+        app: memory-management
+    spec:
+      containers:
+      - name: memory-management
+        image: your-docker-image/memory-management:latest
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - mountPath: /app
+          name: app-volume
+        command: ["python", "core/memory/memory_controller.py"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: vAIn-api
+        image: your-docker-image/vAIn-api:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - mountPath: /app
+          name: app-volume
+        command: ["uvicorn", "services/api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+        dependsOn:
+        - symbolic-reasoning
+        - federated-learning
+        - memory-management
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p2p-network-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: p2p-network
+  template:
+    metadata:
+      labels:
+        app: p2p-network
+    spec:
+      containers:
+      - name: p2p-network
+        image: your-docker-image/p2p-network:latest
+        ports:
+        - containerPort: 9000
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - mountPath: /app
+          name: app-volume
+        command: ["python", "services/p2p/network.py"]
+        dependsOn:
+        - redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: your-docker-image/frontend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: NODE_ENV
+          value: "production"
+        volumeMounts:
+        - mountPath: /app
+          name: frontend-volume
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-neo4j-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-neo4j
+  template:
+    metadata:
+      labels:
+        app: db-neo4j
+    spec:
+      containers:
+      - name: neo4j-db
+        image: neo4j:latest
+        ports:
+        - containerPort: 7474
+        - containerPort: 7687
+        env:
+        - name: NEO4J_AUTH
+          value: "neo4j/password"
+        volumeMounts:
+        - mountPath: /var/lib/neo4j/data
+          name: neo4j-data
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis-cache
+        image: redis:latest
+        ports:
+        - containerPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-test-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-test
+  template:
+    metadata:
+      labels:
+        app: db-test
+    spec:
+      containers:
+      - name: postgres-test-db
+        image: postgres:latest
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "test_user"
+        - name: POSTGRES_PASSWORD
+          value: "test_password"
+        - name: POSTGRES_DB
+          value: "test_db"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+        ports:
+        - containerPort: 9200
+        env:
+        - name: discovery.type
+          value: "single-node"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: symbolic-reasoning-service
+spec:
+  selector:
+    app: symbolic-reasoning
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: federated-learning-service
+spec:
+  selector:
+    app: federated-learning
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+spec:
+  selector:
+    app: api
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: p2p-network-service
+spec:
+  selector:
+    app: p2p-network
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+spec:
+  selector:
+    app: redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-neo4j-service
+spec:
+  selector:
+    app: db-neo4j
+  ports:
+    - protocol: TCP
+      port: 7474
+      targetPort: 7474
+    - protocol: TCP
+      port: 7687
+      targetPort: 7687
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-test-service
+spec:
+  selector:
+    app: db-test
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+    - protocol: TCP
+      port: 9200
+      targetPort: 9200
