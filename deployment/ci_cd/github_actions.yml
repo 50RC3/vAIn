@@ -1,0 +1,80 @@
+name: vAIn CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - root
+  pull_request:
+    branches:
+      - root
+
+jobs:
+  # Job for building the Docker images and running tests
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Cache Docker layers for faster builds
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      # Build Docker images
+      - name: Build Docker images
+        run: |
+          docker-compose -f docker-compose.yml build
+
+      # Run unit tests using pytest
+      - name: Run tests
+        run: |
+          docker-compose -f docker-compose.yml run --rm api pytest --maxfail=1 --disable-warnings -q
+
+  # Job for deploying to Kubernetes
+  deploy_to_k8s:
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Set up kubectl
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v1
+        with:
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      # Deploy to Kubernetes
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f kubernetes/deployment.yaml
+          kubectl apply -f kubernetes/service.yaml
+          kubectl apply -f kubernetes/ingress.yaml
+
+      # Optionally, update Kubernetes deployments with the latest images
+      - name: Update Kubernetes deployments with new images
+        run: |
+          kubectl set image deployment/symbolic-reasoning symbolic-reasoning=50rc3/symbolic-reasoning:${{ github.sha }}
+          kubectl set image deployment/federated-learning federated-learning=50rc3/federated-learning:${{ github.sha }}
+          kubectl set image deployment/api api=50rc3/api:${{ github.sha }}
+          kubectl set image deployment/frontend frontend=50rc3/frontend:${{ github.sha }}
+          kubectl set image deployment/redis redis=50rc3/redis:${{ github.sha }}
+          kubectl set image deployment/db-neo4j db-neo4j=50rc3/db-neo4j:${{ github.sha }}
+          kubectl set image deployment/p2p-network p2p-network=50rc3/p2p-network:${{ github.sha }}
+
+      # Verify Kubernetes deployments
+      - name: Verify Kubernetes deployments
+        run: |
+          kubectl get pods
+

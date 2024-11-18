@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<project>
+  <actions/>
+  <description>Jenkins Pipeline for vAIn</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <com.coravy.hudson.plugins.github.GithubProjectProperty plugin="github@1.34.1">
+      <url>https://github.com/50RC3/vAIn</url>
+    </com.coravy.hudson.plugins.github.GithubProjectProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <triggers>
+    <hudson.triggers.TimerTrigger>
+      <spec>@daily</spec>
+    </hudson.triggers.TimerTrigger>
+  </triggers>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>#!/bin/bash
+        # Pull the latest code from the repository
+        git pull origin root
+
+        # Build Docker images for all services
+        docker-compose -f docker-compose.yml build
+
+        # Run unit tests or integration tests if needed
+        docker-compose -f docker-compose.yml run --rm api pytest --maxfail=1 --disable-warnings -q
+
+        # Deploy to Kubernetes
+        kubectl apply -f kubernetes/deployment.yaml
+        kubectl apply -f kubernetes/service.yaml
+        kubectl apply -f kubernetes/ingress.yaml
+
+        # Optionally, deploy to production or staging environments
+        kubectl set image deployment/symbolic-reasoning symbolic-reasoning=50rc3/symbolic-reasoning:${GIT_COMMIT}
+        kubectl set image deployment/federated-learning federated-learning=50rc3/federated-learning:${GIT_COMMIT}
+        kubectl set image deployment/api api=50rc3/api:${GIT_COMMIT}
+        kubectl set image deployment/frontend frontend=50rc3/frontend:${GIT_COMMIT}
+        kubectl set image deployment/redis redis=50rc3/redis:${GIT_COMMIT}
+        kubectl set image deployment/db-neo4j db-neo4j=50rc3/db-neo4j:${GIT_COMMIT}
+        kubectl set image deployment/p2p-network p2p-network=50rc3/p2p-network:${GIT_COMMIT}
+
+        # Verify Kubernetes deployments
+        kubectl get pods
+      </command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>
