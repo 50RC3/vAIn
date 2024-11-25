@@ -1,219 +1,244 @@
+import os
 import json
-from .episodic_memory import EpisodicMemory
+import logging
+from datetime import datetime
 from .semantic_memory import SemanticMemory
+from .episodic_memory import EpisodicMemory
 from .procedural_memory import ProceduralMemory
-from .cognitive_model import CognitiveModel
-from .util import Logger
-from .learning_algorithm import LearningAlgorithm
 from .multi_modal_memory import MultiModalMemory
-from .distributed_memory import DistributedMemory
+from .long_term_memory import LongTermMemory
+from .short_term_memory import ShortTermMemory
+from .memory_storage import MemoryStorage
+from .memory_encryption import encrypt_data, decrypt_data
+from .memory_compression import compress_memory, decompress_memory
+from .memory_cleaner import MemoryCleaner
+from .memory_monitor import MemoryMonitor
+from .memory_sync import MemorySync
+from .memory_validation import validate_memory
+from .memory_backup import MemoryBackup
+from .memory_events import MemoryEvents
+from .memory_optimization import MemoryOptimization
+from .utils import generate_unique_id
+from .learning_algorithm import LearningAlgorithm
+from .cognitive_model import CognitiveModel
 from .self_awareness import SelfAwareness
+
+# Set up logging for the memory controller module
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class MemoryController:
     def __init__(self, config_path="configs/memory_config.json"):
+        # Load configuration file for memory system setup
         self.config = self.load_config(config_path)
-        self.logger = Logger()  # Enhanced logging for memory actions
-        self.learning_algorithm = LearningAlgorithm(self.config['learning_algorithm'])  # Adaptive learning
-
-        # Initialize memory components
+        
+        # Initialize logging, learning algorithms, and self-awareness components
+        self.logger = logging.getLogger("MemoryController")
+        self.learning_algorithm = LearningAlgorithm(self.config['learning_algorithm'])
+        self.self_awareness = SelfAwareness(self.config['self_awareness'])
+        self.cognitive_model = CognitiveModel(self.config['cognitive'])
+        
+        # Initialize different memory components
         self.episodic_memory = EpisodicMemory(self.config['episodic'])
         self.semantic_memory = SemanticMemory(self.config['semantic'])
-        self.procedural_memory = ProceduralMemory(self.config['procedural'])  # New procedural memory
-        self.multi_modal_memory = MultiModalMemory(self.config['multi_modal'])  # Multi-modal memory for various data types
-        self.distributed_memory = DistributedMemory(self.config['distributed'])  # Distributed memory across nodes
-        self.self_awareness = SelfAwareness(self.config['self_awareness'])  # Self-awareness for introspection
+        self.procedural_memory = ProceduralMemory(self.config['procedural'])
+        self.multi_modal_memory = MultiModalMemory(self.config['multi_modal'])
+        self.long_term_memory = LongTermMemory(self.config['long_term'])
+        self.short_term_memory = ShortTermMemory(self.config['short_term'])
 
-        # Cognitive model for decision-making and recall (higher-order processing)
-        self.cognitive_model = CognitiveModel(self.config['cognitive'])
-
-        # Store memory configuration details for future references
+        # Initialize system components for memory monitoring, backup, and synchronization
+        self.memory_storage = MemoryStorage()
+        self.memory_monitor = MemoryMonitor()
+        self.memory_sync = MemorySync()
+        self.memory_backup = MemoryBackup()
+        self.memory_cleaner = MemoryCleaner()
+        self.memory_validation = validate_memory()
+        self.memory_events = MemoryEvents()
+        self.memory_optimization = MemoryOptimization()
+        
+        # Track memory usage for different components
         self.memory_usage_stats = {
             'episodic_memory_usage': 0,
             'semantic_memory_usage': 0,
             'procedural_memory_usage': 0,
             'multi_modal_memory_usage': 0,
-            'distributed_memory_usage': 0,
+            'long_term_memory_usage': 0,
+            'short_term_memory_usage': 0,
         }
 
     def load_config(self, config_path):
-        """ Load memory configuration from file """
+        """Load memory configuration from file"""
         try:
             with open(config_path, 'r') as file:
                 return json.load(file)
         except FileNotFoundError:
-            self.logger.log_error(f"Configuration file {config_path} not found!")
+            self.logger.error(f"Configuration file {config_path} not found!")
             raise
         except json.JSONDecodeError:
-            self.logger.log_error(f"Error decoding configuration file {config_path}!")
+            self.logger.error(f"Error decoding configuration file {config_path}!")
             raise
 
-    def store_episodic_memory(self, data):
-        """ Store episodic memory (specific events, experiences) """
+    def store_data(self, memory_type, data, metadata=None):
+        """Store data in the appropriate memory type"""
         try:
-            self.episodic_memory.store(data)
-            self.logger.log_info(f"Episodic memory stored: {data}")
-            self.memory_usage_stats['episodic_memory_usage'] += 1  # Track memory usage
+            if memory_type == 'semantic':
+                self.semantic_memory.store(data, metadata)
+            elif memory_type == 'episodic':
+                self.episodic_memory.store(data, metadata)
+            elif memory_type == 'procedural':
+                self.procedural_memory.store(data, metadata)
+            elif memory_type == 'multi_modal':
+                self.multi_modal_memory.store(data, metadata)
+            elif memory_type == 'long_term':
+                self.long_term_memory.store(data, metadata)
+            elif memory_type == 'short_term':
+                self.short_term_memory.store(data, metadata)
+            else:
+                raise ValueError("Invalid memory type specified")
+            self.logger.info(f"Data successfully stored in {memory_type} memory.")
         except Exception as e:
-            self.logger.log_error(f"Error storing episodic memory: {e}")
+            self.logger.error(f"Error storing data: {e}")
 
-    def retrieve_episodic_memory(self, query):
-        """ Retrieve episodic memory """
+    def retrieve_data(self, memory_type, query):
+        """Retrieve data from a specific memory type"""
         try:
-            result = self.episodic_memory.retrieve(query)
-            self.logger.log_info(f"Episodic memory retrieved: {result}")
-            return result
+            if memory_type == 'semantic':
+                return self.semantic_memory.retrieve(query)
+            elif memory_type == 'episodic':
+                return self.episodic_memory.retrieve(query)
+            elif memory_type == 'procedural':
+                return self.procedural_memory.retrieve(query)
+            elif memory_type == 'multi_modal':
+                return self.multi_modal_memory.retrieve(query)
+            elif memory_type == 'long_term':
+                return self.long_term_memory.retrieve(query)
+            elif memory_type == 'short_term':
+                return self.short_term_memory.retrieve(query)
+            else:
+                raise ValueError("Invalid memory type specified")
         except Exception as e:
-            self.logger.log_error(f"Error retrieving episodic memory: {e}")
+            self.logger.error(f"Error retrieving data: {e}")
             return None
 
-    def store_semantic_memory(self, data):
-        """ Store semantic memory (general knowledge) """
+    def update_memory(self, memory_type, data, metadata=None):
+        """Update existing memory data"""
         try:
-            self.semantic_memory.store(data)
-            self.logger.log_info(f"Semantic memory stored: {data}")
-            self.memory_usage_stats['semantic_memory_usage'] += 1  # Track memory usage
+            if memory_type == 'semantic':
+                self.semantic_memory.update(data, metadata)
+            elif memory_type == 'episodic':
+                self.episodic_memory.update(data, metadata)
+            elif memory_type == 'procedural':
+                self.procedural_memory.update(data, metadata)
+            elif memory_type == 'multi_modal':
+                self.multi_modal_memory.update(data, metadata)
+            elif memory_type == 'long_term':
+                self.long_term_memory.update(data, metadata)
+            elif memory_type == 'short_term':
+                self.short_term_memory.update(data, metadata)
+            else:
+                raise ValueError("Invalid memory type specified")
+            self.logger.info(f"Data successfully updated in {memory_type} memory.")
         except Exception as e:
-            self.logger.log_error(f"Error storing semantic memory: {e}")
+            self.logger.error(f"Error updating memory: {e}")
 
-    def retrieve_semantic_memory(self, query):
-        """ Retrieve semantic memory """
+    def clean_unused_memory(self):
+        """Clean unused or redundant memory data"""
         try:
-            result = self.semantic_memory.retrieve(query)
-            self.logger.log_info(f"Semantic memory retrieved: {result}")
-            return result
+            self.memory_cleaner.clean()
+            self.logger.info("Memory cleanup completed.")
         except Exception as e:
-            self.logger.log_error(f"Error retrieving semantic memory: {e}")
+            self.logger.error(f"Error cleaning memory: {e}")
+
+    def encrypt_memory(self, data):
+        """Encrypt data before storing it in memory"""
+        try:
+            return encrypt_data(data)
+        except Exception as e:
+            self.logger.error(f"Error encrypting data: {e}")
             return None
 
-    def store_procedural_memory(self, data):
-        """ Store procedural memory (how-to knowledge, skills) """
+    def decrypt_memory(self, data):
+        """Decrypt data when retrieving from memory"""
         try:
-            self.procedural_memory.store(data)
-            self.logger.log_info(f"Procedural memory stored: {data}")
-            self.memory_usage_stats['procedural_memory_usage'] += 1  # Track memory usage
+            return decrypt_data(data)
         except Exception as e:
-            self.logger.log_error(f"Error storing procedural memory: {e}")
-
-    def retrieve_procedural_memory(self, query):
-        """ Retrieve procedural memory """
-        try:
-            result = self.procedural_memory.retrieve(query)
-            self.logger.log_info(f"Procedural memory retrieved: {result}")
-            return result
-        except Exception as e:
-            self.logger.log_error(f"Error retrieving procedural memory: {e}")
+            self.logger.error(f"Error decrypting data: {e}")
             return None
 
-    def store_multi_modal_memory(self, data):
-        """ Store multi-modal memory (e.g., visual, auditory, sensory) """
+    def compress_memory(self, data):
+        """Compress data for efficient storage"""
         try:
-            self.multi_modal_memory.store(data)
-            self.logger.log_info(f"Multi-modal memory stored: {data}")
-            self.memory_usage_stats['multi_modal_memory_usage'] += 1  # Track memory usage
+            return compress_memory(data)
         except Exception as e:
-            self.logger.log_error(f"Error storing multi-modal memory: {e}")
-
-    def retrieve_multi_modal_memory(self, query):
-        """ Retrieve multi-modal memory """
-        try:
-            result = self.multi_modal_memory.retrieve(query)
-            self.logger.log_info(f"Multi-modal memory retrieved: {result}")
-            return result
-        except Exception as e:
-            self.logger.log_error(f"Error retrieving multi-modal memory: {e}")
+            self.logger.error(f"Error compressing data: {e}")
             return None
 
-    def store_distributed_memory(self, data):
-        """ Store distributed memory across nodes (collaborative memory) """
+    def decompress_memory(self, data):
+        """Decompress memory data when retrieving"""
         try:
-            self.distributed_memory.store(data)
-            self.logger.log_info(f"Distributed memory stored: {data}")
-            self.memory_usage_stats['distributed_memory_usage'] += 1  # Track memory usage
+            return decompress_memory(data)
         except Exception as e:
-            self.logger.log_error(f"Error storing distributed memory: {e}")
+            self.logger.error(f"Error decompressing data: {e}")
+            return None
 
-    def retrieve_distributed_memory(self, query):
-        """ Retrieve distributed memory from networked nodes """
+    def synchronize_memory(self):
+        """Synchronize memory across distributed systems"""
         try:
-            result = self.distributed_memory.retrieve(query)
-            self.logger.log_info(f"Distributed memory retrieved: {result}")
-            return result
+            self.memory_sync.sync()
+            self.logger.info("Memory successfully synchronized.")
         except Exception as e:
-            self.logger.log_error(f"Error retrieving distributed memory: {e}")
+            self.logger.error(f"Error synchronizing memory: {e}")
+
+    def validate_memory_integrity(self):
+        """Validate the integrity and consistency of stored memory"""
+        try:
+            is_valid = self.memory_validation.validate()
+            if is_valid:
+                self.logger.info("Memory integrity is valid.")
+            else:
+                self.logger.warning("Memory integrity validation failed.")
+            return is_valid
+        except Exception as e:
+            self.logger.error(f"Error validating memory: {e}")
+            return False
+
+    def backup_memory(self):
+        """Backup memory data for disaster recovery"""
+        try:
+            self.memory_backup.backup()
+            self.logger.info("Memory backup completed.")
+        except Exception as e:
+            self.logger.error(f"Error backing up memory: {e}")
+
+    def monitor_memory_health(self):
+        """Monitor the health and performance of memory systems"""
+        try:
+            health_status = self.memory_monitor.monitor()
+            self.logger.info(f"Memory health status: {health_status}")
+        except Exception as e:
+            self.logger.error(f"Error monitoring memory health: {e}")
+
+    def generate_unique_memory_id(self):
+        """Generate a unique ID for new memory entries"""
+        try:
+            return generate_unique_id()
+        except Exception as e:
+            self.logger.error(f"Error generating unique ID: {e}")
             return None
 
     def analyze_memory(self):
-        """ Analyze and optimize memory usage """
+        """Analyze and optimize memory usage across different types"""
         try:
             self.episodic_memory.analyze()
             self.semantic_memory.analyze()
             self.procedural_memory.analyze()
             self.multi_modal_memory.analyze()
-            self.distributed_memory.analyze()
+            self.long_term_memory.analyze()
+            self.short_term_memory.analyze()
 
             # Optimize memory based on analysis
-            self.learning_algorithm.optimize_memory(self.episodic_memory, self.semantic_memory, 
-                                                    self.procedural_memory, self.multi_modal_memory, 
-                                                    self.distributed_memory)
-            self.logger.log_info("Memory analysis complete and optimization applied.")
+            self.memory_optimization.optimize()
+
+            self.logger.info("Memory analysis and optimization completed.")
         except Exception as e:
-            self.logger.log_error(f"Error analyzing and optimizing memory: {e}")
-
-    def perform_adaptive_learning(self):
-        """ Trigger adaptive learning based on changes in memory or environment """
-        try:
-            # Perform adaptive learning to optimize memory use
-            self.learning_algorithm.adapt_to_changes(self.episodic_memory, self.semantic_memory, 
-                                                     self.procedural_memory, self.multi_modal_memory, 
-                                                     self.distributed_memory)
-            self.logger.log_info("Adaptive learning triggered successfully.")
-        except Exception as e:
-            self.logger.log_error(f"Error triggering adaptive learning: {e}")
-
-    def update_self_awareness(self, new_data):
-        """ Update self-awareness based on memory and experiences """
-        try:
-            self.self_awareness.update(new_data)
-            self.logger.log_info(f"Self-awareness updated with new data: {new_data}")
-        except Exception as e:
-            self.logger.log_error(f"Error updating self-awareness: {e}")
-
-    def share_memory_across_nodes(self, data):
-        """ Share memory data with other nodes (agents) in the system for collective learning """
-        try:
-            # Implement memory sharing logic across nodes (AGI network)
-            # Data is shared and synchronized with other nodes to allow collective learning.
-            # This could involve sending data to a central server or peer-to-peer communication.
-            self.logger.log_info(f"Sharing memory across nodes: {data}")
-            # Simulate memory sharing
-            return True  # Assume sharing is successful
-        except Exception as e:
-            self.logger.log_error(f"Error sharing memory across nodes: {e}")
-            return False
-
-    def update_cognitive_model(self, new_data):
-        """ Update cognitive model based on new memories and experiences """
-        try:
-            self.cognitive_model.update(new_data)
-            self.logger.log_info(f"Cognitive model updated with new data: {new_data}")
-        except Exception as e:
-            self.logger.log_error(f"Error updating cognitive model: {e}")
-
-    def get_memory_stats(self):
-        """ Retrieve current memory usage statistics """
-        return self.memory_usage_stats
-
-    def get_cognitive_model_state(self):
-        """ Retrieve the current state of the cognitive model """
-        return self.cognitive_model.get_state()
-
-    def optimize_memory(self):
-        """ Optimize overall memory management based on the latest analysis and cognitive model """
-        try:
-            # Consolidate memory strategies based on cognitive model
-            self.cognitive_model.apply_memory_optimization(self.episodic_memory, self.semantic_memory, 
-                                                           self.procedural_memory, self.multi_modal_memory, 
-                                                           self.distributed_memory)
-            self.logger.log_info("Memory optimization applied based on cognitive model.")
-        except Exception as e:
-            self.logger.log_error(f"Error applying memory optimization: {e}")
+            self.logger.error(f"Error analyzing memory: {e}")
