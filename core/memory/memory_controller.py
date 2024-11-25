@@ -223,22 +223,28 @@ class MemoryController:
         try:
             return generate_unique_id()
         except Exception as e:
-            self.logger.error(f"Error generating unique ID: {e}")
+            self.logger.error(f"Error generating unique memory ID: {e}")
             return None
 
-    def analyze_memory(self):
-        """Analyze and optimize memory usage across different types"""
+    def trigger_memory_event(self, event_type, event_data):
+        """Trigger events related to memory"""
         try:
-            self.episodic_memory.analyze()
-            self.semantic_memory.analyze()
-            self.procedural_memory.analyze()
-            self.multi_modal_memory.analyze()
-            self.long_term_memory.analyze()
-            self.short_term_memory.analyze()
-
-            # Optimize memory based on analysis
-            self.memory_optimization.optimize()
-
-            self.logger.info("Memory analysis and optimization completed.")
+            self.memory_events.trigger(event_type, event_data)
+            self.logger.info(f"Memory event {event_type} triggered successfully.")
         except Exception as e:
-            self.logger.error(f"Error analyzing memory: {e}")
+            self.logger.error(f"Error triggering memory event: {e}")
+
+    def optimize_memory(self):
+        """Optimize memory usage for efficiency"""
+        try:
+            self.memory_optimization.optimize()
+            self.logger.info("Memory optimization completed.")
+        except Exception as e:
+            self.logger.error(f"Error optimizing memory: {e}")
+
+# Usage example
+if __name__ == "__main__":
+    memory_controller = MemoryController(config_path="configs/memory_config.json")
+    memory_controller.store_data("semantic", "New knowledge", metadata={"timestamp": datetime.now()})
+    retrieved_data = memory_controller.retrieve_data("semantic", query="New knowledge")
+    print(retrieved_data)
