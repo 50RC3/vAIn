@@ -6,7 +6,7 @@ class PropositionalLogic:
     A class to represent propositional logic and perform advanced logical operations.
     Supports complex expression parsing, truth table generation, and additional operators.
     """
-
+    
     def __init__(self):
         """Initialize the propositional logic system with no variables."""
         self.variables = {}
@@ -29,6 +29,45 @@ class PropositionalLogic:
         self._check_variable_exists(var_name)
         self.variables[var_name] = value
         print(f"Variable updated: {var_name} -> {value}")
+
+    def negation(self, var_name: str) -> bool:
+        """
+        Negates a logical variable.
+        :param var_name: Name of the variable to negate
+        :return: Negated value
+        """
+        self._check_variable_exists(var_name)
+        return not self.variables[var_name]
+
+    def conjunction(self, var_name1: str, var_name2: str) -> bool:
+        """
+        Performs logical AND operation between two variables.
+        :param var_name1: First variable
+        :param var_name2: Second variable
+        :return: Result of AND operation
+        """
+        self._check_variables_exist(var_name1, var_name2)
+        return self.variables[var_name1] and self.variables[var_name2]
+
+    def disjunction(self, var_name1: str, var_name2: str) -> bool:
+        """
+        Performs logical OR operation between two variables.
+        :param var_name1: First variable
+        :param var_name2: Second variable
+        :return: Result of OR operation
+        """
+        self._check_variables_exist(var_name1, var_name2)
+        return self.variables[var_name1] or self.variables[var_name2]
+
+    def implication(self, var_name1: str, var_name2: str) -> bool:
+        """
+        Performs logical implication (if var_name1 then var_name2).
+        :param var_name1: Premise variable
+        :param var_name2: Conclusion variable
+        :return: Result of implication
+        """
+        self._check_variables_exist(var_name1, var_name2)
+        return not self.variables[var_name1] or self.variables[var_name2]
 
     def evaluate_expression(self, expression: str) -> bool:
         """
@@ -97,6 +136,11 @@ class PropositionalLogic:
         if var_name not in self.variables:
             raise ValueError(f"Variable '{var_name}' not found.")
 
+    def _check_variables_exist(self, var_name1: str, var_name2: str) -> None:
+        """Check if both variables exist in the logic system."""
+        self._check_variable_exists(var_name1)
+        self._check_variable_exists(var_name2)
+
     def __str__(self) -> str:
         """Return a string representation of all variables and their values."""
         return "\n".join(f"{var} ({type(val).__name__}): {val}" for var, val in self.variables.items())
@@ -117,3 +161,4 @@ if __name__ == "__main__":
     truth_table = logic_system.generate_truth_table_data("A and (B or C)")
     print("\nGenerated Truth Table Data:")
     print(truth_table)
+

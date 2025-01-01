@@ -1,9 +1,8 @@
-import os
 import json
 import logging
 from datetime import datetime
-from .semantic_memory import SemanticMemory
 from .episodic_memory import EpisodicMemory
+from .semantic_memory import SemanticMemory
 from .procedural_memory import ProceduralMemory
 from .multi_modal_memory import MultiModalMemory
 from .long_term_memory import LongTermMemory
@@ -242,9 +241,3 @@ class MemoryController:
         except Exception as e:
             self.logger.error(f"Error optimizing memory: {e}")
 
-# Usage example
-if __name__ == "__main__":
-    memory_controller = MemoryController(config_path="configs/memory_config.json")
-    memory_controller.store_data("semantic", "New knowledge", metadata={"timestamp": datetime.now()})
-    retrieved_data = memory_controller.retrieve_data("semantic", query="New knowledge")
-    print(retrieved_data)
