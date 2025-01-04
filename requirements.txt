@@ -20,7 +20,7 @@ requests==2.31.0
 matplotlib==3.8.0
 
 # Numpy for numerical operations (useful for performance metrics and calculations)
-numpy==1.26.0
+numpy==1.24.3
 
 # Celery for asynchronous task queue (optional, if you plan to scale task processing)
 celery==5.3.0

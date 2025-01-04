@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 
+import P2PNetworkStats from "./P2PNetworkStats";
+import Chatbot from "./Chatbot";
+
 const Dashboard = () => {
   const [taskUpdates, setTaskUpdates] = useState([]);
   const [isConnected, setIsConnected] = useState(false);

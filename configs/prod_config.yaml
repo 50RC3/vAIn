@@ -1,1 +1,47 @@
-# Production configuration
+# Production Configuration for vAIn Project
+
+project:
+  name: vAIn
+  description: "Production configuration for the vAIn AGI framework."
+  version: 1.0.0
+
+database:
+  db_engine: postgresql
+  db_name: vain_prod_db
+  username: vain_prod_admin
+  password: secure_production_password_here
+  host: production_db_host
+  port: 5432
+  ssl:
+    enabled: true
+    ca_cert_path: ./configs/ssl/ca.pem
+
+logging:
+  enabled: true
+  log_level: INFO
+  log_file: ./logs/vain_prod.log
+
+memory_management:
+  enabled: true
+  short_term_memory:
+    enabled: true
+  long_term_memory:
+    enabled: true
+  episodic_memory:
+    enabled: true
+
+backup:
+  enabled: true
+  frequency: daily
+  retention_policy:
+    max_days: 30
+  locations:
+    - ./backups
+    - s3://vain-project-backups
+
+security:
+  enabled: true
+  encryption:
+    enabled: true
+    methods:
+      - AES-256

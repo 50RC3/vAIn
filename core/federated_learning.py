@@ -43,11 +43,13 @@ class FederatedLearning:
         # Logging setup
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
+        self.logger.info("Federated Learning initialized with aggregation method: %s", self.aggregation_method)
 
         # Create checkpoints directory
         os.makedirs(checkpoint_dir, exist_ok=True)
 
     def distribute_model(self):
+        self.logger.info("Distributing global model to clients.")
         """
         Distribute the global model to all clients.
         """
@@ -55,6 +57,7 @@ class FederatedLearning:
             client_model.set_weights(self.global_model.get_weights())
 
     def aggregate_updates(self, client_updates: List[Dict[str, Any]]):
+        self.logger.info("Aggregating updates from clients.")
         """
         Aggregate client updates into the global model with additional privacy and robustness measures.
 
@@ -75,6 +78,7 @@ class FederatedLearning:
             raise ValueError(f"Unsupported aggregation method: {self.aggregation_method}")
 
     def _apply_secure_aggregation(self, client_updates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        self.logger.info("Applying secure aggregation.")
         for update in client_updates:
             for key in update["weights"]:
                 update["weights"][key] = self._add_noise(update["weights"][key])
@@ -121,6 +125,7 @@ class FederatedLearning:
         self.global_model.set_weights(aggregated_weights)
 
     def async_train_clients(self, train_data: List[Any], epochs: int = 1) -> List[Dict[str, Any]]:
+        self.logger.info("Starting asynchronous training for %d epochs.", epochs)
         """
         Train client models asynchronously.
 
@@ -160,6 +165,7 @@ class FederatedLearning:
         client_updates.append(update)
 
     def save_checkpoint(self, epoch: int):
+        self.logger.info("Saving checkpoint for epoch: %d", epoch)
         """
         Save the current state of the global model.
 
@@ -171,6 +177,7 @@ class FederatedLearning:
         self.logger.info(f"Checkpoint saved at {checkpoint_path}")
 
     def load_checkpoint(self, epoch: int):
+        self.logger.info("Loading checkpoint for epoch: %d", epoch)
         """
         Load a previously saved model state.
 
@@ -182,6 +189,7 @@ class FederatedLearning:
         self.logger.info(f"Checkpoint loaded from {checkpoint_path}")
 
     def global_training_round(self, train_data: List[Any], epochs: int = 1, validation_data: List[Any] = None):
+        self.logger.info("Starting global training round for %d epochs.", epochs)
         """
         Conduct a global training round.
 
@@ -208,6 +216,7 @@ class FederatedLearning:
                     return
 
     def evaluate_model(self, validation_data: List[Any]) -> float:
+        self.logger.info("Evaluating model on validation data.")
         """
         Evaluate the global model on validation data.
 
