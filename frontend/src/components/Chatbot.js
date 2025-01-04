@@ -3,6 +3,8 @@ import React, { useState } from "react";
 const Chatbot = () => {
   const [userInput, setUserInput] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const [loading, setLoading] = useState(false); // Loading state
+  const [error, setError] = useState(null); // Error state
 
   const handleInputChange = (event) => {
     setUserInput(event.target.value);
@@ -10,10 +12,18 @@ const Chatbot = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    // Send user input to the backend and get response
-    const response = await sendMessageToChatbot(userInput);
-    setChatHistory([...chatHistory, { user: userInput, bot: response }]);
-    setUserInput("");
+    setLoading(true); // Set loading to true
+    setError(null); // Reset error state
+
+    try {
+      const response = await sendMessageToChatbot(userInput);
+      setChatHistory([...chatHistory, { user: userInput, bot: response }]);
+      setUserInput("");
+    } catch (err) {
+      setError("Failed to send message. Please try again."); // Set error message
+    } finally {
+      setLoading(false); // Reset loading state
+    }
   };
 
   const sendMessageToChatbot = async (message) => {
@@ -46,6 +56,8 @@ const Chatbot = () => {
           </div>
         ))}
       </div>
+      {loading && <p>Loading...</p>} {/* Loading indicator */}
+      {error && <p style={{ color: 'red' }}>{error}</p>} {/* Error message */}
       <form onSubmit={handleSubmit}>
         <input
           type="text"
