@@ -1,75 +1,88 @@
-# Database Configuration for vAIn Project
+# Environment Variables 
+# Ensure these variables are set in your environment before running the application.
+db_user: ${DB_USER}                          # Database username for authentication
+db_password: ${DB_PASSWORD}                  # Database password for the user
+redis_password: ${REDIS_PASSWORD}            # Password for the Redis database
+backup_encryption_key: ${BACKUP_ENCRYPTION_KEY} # Key for encrypting backups
 
+# Default Database Configuration (Primary Database)
 default:
-  db_engine: postgresql            # Primary database engine (e.g., postgresql, mysql, sqlite)
-  db_name: vain_db                 # Name of the primary database
-  username: vain_admin             # Database user with required permissions
-  password: secure_password_here   # Strong, secure password for the user
-  host: localhost                  # Host address for the database
-  port: 5432                       # Default PostgreSQL port
-  pool_size: 10                    # Maximum number of connections in the pool
-  timeout: 30                      # Connection timeout in seconds
+  db_engine: postgresql                      # Database engine (e.g., PostgreSQL)
+  db_name: vain_db                           # Name of the main database
+  username: ${db_user}                       # Use the environment variable for username
+  password: ${db_password}                   # Use the environment variable for password
+  host: localhost                            # Host address where the database is located
+  port: 5432                                 # Default PostgreSQL port
+  pool_size: 10                              # Maximum number of database connections in the pool
+  timeout: 30                                # Connection timeout in seconds
   ssl:
-    enabled: true                  # Enable SSL for secure connections
-    ca_cert_path: ./configs/ssl/ca.pem
+    enabled: true                            # Enable SSL for secure connections
+    ca_cert_path: ./configs/ssl/ca.pem       # Path to the SSL certificate authority file
 
 # Replica Configuration (For read-heavy workloads)
+# These replicas handle read requests, distributing the load and improving scalability.
 replicas:
-  - db_name: vain_replica_1
-    host: replica1.vain.local
-    port: 5432
-    pool_size: 5
-    load_balancer_weight: 0.5      # Weight for load balancing
-  - db_name: vain_replica_2
-    host: replica2.vain.local
-    port: 5432
-    pool_size: 5
-    load_balancer_weight: 0.5
+  - db_name: vain_replica_1                  # Name of the first replica
+    host: replica1.vain.local                # Host address of the first replica
+    port: 5432                               # Port for the first replica
+    pool_size: 5                              # Connection pool size for the replica
+    load_balancer_weight: 0.5                # Load balancer weight for distribution of traffic
+  - db_name: vain_replica_2                  # Name of the second replica
+    host: replica2.vain.local                # Host address of the second replica
+    port: 5432                               # Port for the second replica
+    pool_size: 5                              # Connection pool size for the replica
+    load_balancer_weight: 0.5                # Load balancer weight for distribution of traffic
 
-# Memory Database (For cache or temporary data)
+# Memory Database Configuration (For caching or temporary data)
+# Redis is used for fast access to temporary data, such as session information.
 memory_db:
-  db_engine: redis
-  host: localhost
-  port: 6379
-  db_index: 0                      # Redis database index
-  password: redis_secure_password
-  max_connections: 100
-  ttl: 3600                        # Time-to-live for cached data (in seconds)
+  db_engine: redis                           # Use Redis as the in-memory database engine
+  host: localhost                            # Redis server location
+  port: 6379                                 # Redis default port
+  db_index: 0                                # Redis database index (multiple databases can be used in Redis)
+  password: ${redis_password}                # Redis password from the environment variable
+  max_connections: 100                       # Maximum number of concurrent connections
+  ttl: 3600                                  # Time-to-live for cached data in seconds
 
 # Backup Configuration
+# Set up regular backups of the database to ensure data safety and recovery.
 backup:
-  enabled: true
-  schedule: daily                  # Backup frequency (e.g., daily, weekly)
-  time: "02:00"                    # Backup time in HH:MM format
-  location: ./backups/             # Directory for storing backups
+  enabled: true                              # Enable backups
+  schedule: daily                            # Backup frequency (e.g., daily, weekly)
+  time: "02:00"                              # Time of day to perform the backup (in HH:MM format)
+  location: ./backups/                       # Directory to store backup files
   encryption:
-    enabled: true
-    encryption_key: ./configs/keys/backup_encryption_key.pem
+    enabled: true                            # Enable encryption for backups
+    encryption_key: ${backup_encryption_key} # Key for encrypting backup data (from environment variable)
   retention:
-    days: 30                       # Retain backups for 30 days
+    days: 30                                 # Retain backups for 30 days before deletion
 
-# Logging for DB Operations
+# Logging Configuration
+# Enable logging to monitor database operations and identify performance bottlenecks.
 logging:
-  enabled: true
-  log_file: ./logs/db_operations.log
-  log_level: DEBUG                 # DEBUG, INFO, WARNING, ERROR
-  query_time_threshold: 1000       # Log queries taking more than 1000ms
+  enabled: true                              # Enable logging
+  log_file: ./logs/db_operations.log         # Path to log file for database operations
+  log_level: DEBUG                           # Log level (DEBUG, INFO, WARNING, ERROR)
+  query_time_threshold: 1000                 # Log queries that take longer than 1000ms (1 second)
 
 # Migration Configuration
+# Alembic is used for database schema migrations to manage changes over time.
 migrations:
-  tool: alembic                    # Database migration tool
-  migrations_folder: ./migrations/ # Directory for migration scripts
+  tool: alembic                             # Database migration tool to use (Alembic)
+  migrations_folder: ./migrations/          # Folder containing migration scripts
 
-# Testing Database (For Development and CI)
+# Testing Database Configuration
+# Use an SQLite in-memory database for running tests to avoid interfering with the production database.
 testing:
-  db_engine: sqlite
-  db_name: vain_test.db
-  in_memory: true                  # Use in-memory database for testing
-  verbose: true                    # Enable verbose output during tests
+  db_engine: sqlite                          # Use SQLite for testing (in-memory database)
+  db_name: vain_test.db                      # Name of the testing database
+  in_memory: true                            # Use in-memory database for testing (faster setup)
+  verbose: true                              # Enable verbose output during tests for debugging
 
-# Advanced Options
+# Advanced Configuration Options
+# Customize advanced behavior of the database connections.
 advanced:
-  max_query_length: 5000           # Maximum length of a query to log
-  autocommit: true                 # Enable autocommit for transactions
-  reconnect_attempts: 3            # Number of retries if a connection fails
-  reconnect_interval: 5            # Seconds between reconnect attempts
+  max_query_length: 5000                     # Maximum query length to log (queries longer than this will be logged)
+  autocommit: true                           # Enable autocommit for transactions (saves automatically)
+  reconnect_attempts: 3                      # Number of retries if a database connection fails
+  reconnect_interval: 5                      # Time interval (in seconds) between reconnect attempts
