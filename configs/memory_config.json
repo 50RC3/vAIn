@@ -11,6 +11,14 @@
       "eviction_policy": {
         "method": "least_recently_used",
         "priority_boost_threshold": 0.8
+      },
+      "explainability": {
+        "enabled": true,
+        "method": "attention_weights", 
+        "visualization": {
+          "enabled": true,
+          "format": "heatmap" 
+        }
       }
     },
     "long_term_memory": {
@@ -28,7 +36,15 @@
         "method": "relevance-weighted",
         "merge_strategy": "clustered_nodes"
       },
-      "description": "Persistent knowledge storage with high-speed semantic retrieval."
+      "description": "Persistent knowledge storage with high-speed semantic retrieval.",
+      "explainability": {
+        "enabled": true,
+        "method": "nearest_neighbors",
+        "visualization": {
+          "enabled": true,
+          "format": "graph" 
+        }
+      }
     },
     "episodic_memory": {
       "enabled": true,
@@ -44,7 +60,15 @@
         "method": "age-weighted",
         "threshold": 0.2
       },
-      "description": "Captures key experiences and their relationships for future insights."
+      "description": "Captures key experiences and their relationships for future insights.",
+      "explainability": {
+        "enabled": true,
+        "method": "storytelling", 
+        "visualization": {
+          "enabled": true,
+          "format": "timeline" 
+        }
+      }
     },
     "working_memory": {
       "enabled": true,
@@ -53,7 +77,15 @@
       "storage_format": "stack_buffer",
       "retrieval_method": "stack_order",
       "features": ["real-time_contextual_analysis"],
-      "description": "Temporary workspace for in-process computations and problem-solving."
+      "description": "Temporary workspace for in-process computations and problem-solving.",
+      "explainability": {
+        "enabled": true,
+        "method": "activation_levels", 
+        "visualization": {
+          "enabled": true,
+          "format": "bar_chart" 
+        }
+      }
     }
   },
   "memory_operations": {
@@ -166,5 +198,35 @@
       "connected_agents": ["task_planner", "nlp_engine"],
       "description": "Facilitates knowledge exchange with other subsystems."
     }
+  },
+  "explainability": {
+    "enabled": true,
+    "methods": [
+      "attention_weights", "nearest_neighbors", "storytelling", "activation_levels"
+    ], 
+    "visualization": {
+      "enabled": true,
+      "tools": ["matplotlib", "plotly"], 
+      "output_format": "html", 
+      "interactive": true 
+    }
+  },
+  "neuromorphic_computing": {
+    "enabled": false, 
+    "exploration_mode": "simulation", 
+    "hardware_acceleration": {
+      "enabled": false,
+      "device": "neuromorphic_chip" 
+    }
+  },
+  "continuous_evaluation": {
+    "enabled": true,
+    "metrics": [
+      "accuracy", "precision", "recall", "f1_score", "memory_utilization"
+    ],
+    "feedback_loops": [
+      "parameter_tuning", "algorithm_selection", "architecture_modification"
+    ],
+    "evaluation_frequency": "daily" 
   }
 }
