@@ -162,3 +162,4 @@ if __name__ == "__main__":
     print("\nGenerated Truth Table Data:")
     print(truth_table)
 
+
