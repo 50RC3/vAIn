@@ -16,6 +16,7 @@ class MemorySync:
         """
         self.shared_memory_size = shared_memory_size
         self.shared_memory = multiprocessing.Array('d', self.shared_memory_size)
+        self.lock = multiprocessing.Lock()
 
     def sync_process_memory(self, process_data):
         """
@@ -24,19 +25,21 @@ class MemorySync:
         :return: None
         """
         try:
-            # Store the data in shared memory
-            logger.info(f"Storing process data in shared memory: {process_data}")
-            for i, value in enumerate(process_data):
-                if i < len(self.shared_memory):
-                    self.shared_memory[i] = value
+            with self.lock:
+                # Store the data in shared memory
+                logger.info(f"Storing process data in shared memory: {process_data}")
+                for i, value in enumerate(process_data):
+                    if i < len(self.shared_memory):
+                        self.shared_memory[i] = value
 
             # Simulate some processing delay
             time.sleep(1)
 
-            # Retrieve the synchronized data
-            synchronized_data = list(self.shared_memory)[:len(process_data)]
-            logger.info(f"Synchronized memory data retrieved: {synchronized_data}")
-            return synchronized_data
+            with self.lock:
+                # Retrieve the synchronized data
+                synchronized_data = list(self.shared_memory)[:len(process_data)]
+                logger.info(f"Synchronized memory data retrieved: {synchronized_data}")
+                return synchronized_data
 
         except Exception as e:
             logger.error(f"Error during memory synchronization: {e}")
@@ -48,16 +51,17 @@ class MemorySync:
         :return: None
         """
         try:
-            # Perform garbage collection to clean up memory usage
-            logger.info("Running garbage collection on shared memory...")
-            gc.collect()
+            with self.lock:
+                # Perform garbage collection to clean up memory usage
+                logger.info("Running garbage collection on shared memory...")
+                gc.collect()
 
-            # Optionally reset shared memory to clear unnecessary data
-            logger.info("Resetting shared memory...")
-            for i in range(len(self.shared_memory)):
-                self.shared_memory[i] = 0
+                # Optionally reset shared memory to clear unnecessary data
+                logger.info("Resetting shared memory...")
+                for i in range(len(self.shared_memory)):
+                    self.shared_memory[i] = 0
 
-            logger.info("Shared memory optimized and cleared.")
+                logger.info("Shared memory optimized and cleared.")
         except Exception as e:
             logger.error(f"Error during shared memory optimization: {e}")
 
@@ -71,9 +75,10 @@ class MemorySync:
             memory = psutil.virtual_memory()
             logger.info(f"System memory usage: {memory.percent}%")
 
-            # Log memory usage of shared memory
-            shared_memory_usage = sum(self.shared_memory) / len(self.shared_memory) * 100
-            logger.info(f"Shared memory usage: {shared_memory_usage}%")
+            with self.lock:
+                # Log memory usage of shared memory
+                shared_memory_usage = sum(self.shared_memory) / len(self.shared_memory) * 100
+                logger.info(f"Shared memory usage: {shared_memory_usage}%")
         except Exception as e:
             logger.error(f"Error during memory usage monitoring: {e}")
 
@@ -85,14 +90,12 @@ class MemorySync:
         :return: Result of the process function.
         """
         try:
-            # Create a multiprocessing pool for running processes
             with multiprocessing.Pool(processes=2) as pool:
                 result = pool.apply(process_function, (process_data,))
                 return result
         except Exception as e:
             logger.error(f"Error during process synchronization: {e}")
             return None
-
 
 def example_process_data(data):
     """
@@ -105,7 +108,6 @@ def example_process_data(data):
     logger.info(f"Processing data: {data}")
     processed_data = [x * 2 for x in data]  # Example operation
     return processed_data
-
 
 if __name__ == "__main__":
     # Example usage of MemorySync for synchronization across processes

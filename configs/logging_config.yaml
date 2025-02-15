@@ -10,6 +10,7 @@ formatters:
   concise:
     format: "[%(levelname)s] %(message)s"
   json:
+    class: pythonjsonlogger.jsonlogger.JsonFormatter
     format: |
       {
         "timestamp": "%(asctime)s",
@@ -18,7 +19,8 @@ formatters:
         "message": "%(message)s",
         "module": "%(module)s",
         "filename": "%(filename)s",
-        "line": "%(lineno)d"
+        "line": "%(lineno)d",
+        "traceback": "%(exc_text)s"
       }
 
 # Handlers
@@ -108,12 +110,6 @@ loggers:
     handlers:
       - json_file
     propagate: false
-
-# Root Logger (Fallback)
-root:
-  level: WARNING
-  handlers:
-    - console
 
 # Global Settings
 global_settings:

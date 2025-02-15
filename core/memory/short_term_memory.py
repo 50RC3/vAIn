@@ -1,5 +1,9 @@
+import json
 import logging
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+# Add missing imports that should be in the project
 from .memory_storage import MemoryStorage
 from .memory_encryption import encrypt_data, decrypt_data
 from .memory_compression import compress_memory, decompress_memory
@@ -10,12 +14,25 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 logger = logging.getLogger('vAIn.ShortTermMemory')
 
 class ShortTermMemory:
-    def __init__(self):
+    def __init__(self, max_entries: int = 100):
         self.memory_storage = MemoryStorage()
+        self.max_entries = max_entries
+        logger.info("Initialized short-term memory with max entries: %d", max_entries)
 
-    def store(self, data, metadata=None):
-        """Store short-term memory data with optional metadata."""
+    def store(self, data: Any, metadata: Optional[Dict] = None) -> Optional[str]:
+        """Store short-term memory data with validation."""
         try:
+            if len(self.memory_storage.get_all()) >= self.max_entries:
+                logger.error("Memory capacity reached")
+                return None
+
+            # Validate metadata
+            if metadata is not None and not isinstance(metadata, dict):
+                raise ValueError("Metadata must be a dictionary")
+
+            # Validate data is serializable
+            json.dumps(data)  # Will raise TypeError if not serializable
+
             logger.info("Storing data in short-term memory.")
 
             # Encrypt and compress the data before storing it
@@ -38,8 +55,11 @@ class ShortTermMemory:
 
             logger.info(f"Short-term memory successfully stored with ID: {memory_id}")
             return memory_id  # Return the memory ID for future reference
+        except (ValueError, TypeError) as e:
+            logger.error("Validation error: %s", str(e))
+            return None
         except Exception as e:
-            logger.error(f"Error storing short-term memory data: {e}")
+            logger.error("Unexpected error: %s", str(e))
             return None
 
     def retrieve(self, memory_id):
@@ -120,6 +140,8 @@ class ShortTermMemory:
             logger.info("All short-term memory data cleared.")
         except Exception as e:
             logger.error(f"Error clearing short-term memory: {e}")
+            # Optionally, re-raise the exception if it's critical
+            raise  # or just continue with a log message
 
     def backup(self):
         """Backup short-term memory to persistent storage."""
@@ -128,9 +150,10 @@ class ShortTermMemory:
             all_entries = self.memory_storage.retrieve_all_by_type('short_term')
 
             # Implement a backup mechanism (e.g., saving to an external system or file)
-            # For now, we'll log the process
-            for entry in all_entries:
-                logger.info(f"Backing up memory entry ID: {entry['memory_id']}")
+            # Example: Save to a file
+            backup_file = "short_term_memory_backup.json"
+            with open(backup_file, 'w') as f:
+                json.dump(all_entries, f, indent=4)
 
             logger.info("Short-term memory backup completed.")
         except Exception as e:

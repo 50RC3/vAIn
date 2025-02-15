@@ -3,19 +3,39 @@ name: vAIn CI/CD Pipeline
 on:
   push:
     branches:
-      - root
+      - main
   pull_request:
     branches:
-      - root
+      - main
 
 jobs:
-  # Job for building the Docker images and running tests
   build_and_test:
     runs-on: ubuntu-latest
     steps:
-      # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      # Add AI model verification
+      - name: Verify AI Models
+        run: |
+          python -m pip install torch torchvision
+          python tests/verify_models.py
+
+      # Add memory management tests
+      - name: Test Memory Systems
+        run: |
+          python tests/test_memory_management.py
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
 
       # Set up Docker
       - name: Set up Docker Buildx
@@ -33,17 +53,26 @@ jobs:
       # Build Docker images
       - name: Build Docker images
         run: |
-          docker-compose -f docker-compose.yml build
+          docker-compose -f docker-compose.yml build vain-core
+          docker-compose -f docker-compose.yml build vain-api
+          docker-compose -f docker-compose.yml build vain-ui
 
       # Run unit tests using pytest
       - name: Run tests
         run: |
-          docker-compose -f docker-compose.yml run --rm api pytest --maxfail=1 --disable-warnings -q
+          docker-compose -f docker-compose.yml run --rm vain-core pytest tests/
+          docker-compose -f docker-compose.yml run --rm vain-api pytest tests/
+          docker-compose -f docker-compose.yml run --rm vain-ui npm test
 
-  # Job for deploying to Kubernetes
+      # Performance Testing
+      - name: Performance Testing
+        run: |
+          python benchmarks/run_performance_tests.py
+
   deploy_to_k8s:
     runs-on: ubuntu-latest
     needs: build_and_test
+    if: github.ref == 'refs/heads/main'
     steps:
       # Checkout the code
       - name: Checkout code
@@ -58,20 +87,19 @@ jobs:
       # Deploy to Kubernetes
       - name: Deploy to Kubernetes
         run: |
-          kubectl apply -f kubernetes/deployment.yaml
-          kubectl apply -f kubernetes/service.yaml
-          kubectl apply -f kubernetes/ingress.yaml
+          kubectl apply -f kubernetes/vain-namespace.yaml
+          kubectl apply -f kubernetes/vain-core.yaml
+          kubectl apply -f kubernetes/vain-api.yaml
+          kubectl apply -f kubernetes/vain-ui.yaml
+          kubectl apply -f kubernetes/vain-db.yaml
 
       # Optionally, update Kubernetes deployments with the latest images
       - name: Update Kubernetes deployments with new images
         run: |
-          kubectl set image deployment/symbolic-reasoning symbolic-reasoning=50rc3/symbolic-reasoning:${{ github.sha }}
-          kubectl set image deployment/federated-learning federated-learning=50rc3/federated-learning:${{ github.sha }}
-          kubectl set image deployment/api api=50rc3/api:${{ github.sha }}
-          kubectl set image deployment/frontend frontend=50rc3/frontend:${{ github.sha }}
-          kubectl set image deployment/redis redis=50rc3/redis:${{ github.sha }}
-          kubectl set image deployment/db-neo4j db-neo4j=50rc3/db-neo4j:${{ github.sha }}
-          kubectl set image deployment/p2p-network p2p-network=50rc3/p2p-network:${{ github.sha }}
+          kubectl set image deployment/vain-core vain-core=ghcr.io/vain/vain-core:${{ github.sha }}
+          kubectl set image deployment/vain-api vain-api=ghcr.io/vain-api:${{ github.sha }}
+          kubectl set image deployment/vain-ui vain-ui=ghcr.io/vain-ui:${{ github.sha }}
+          kubectl set image deployment/vain-db vain-db=ghcr.io/vain-db:${{ github.sha }}
 
       # Verify Kubernetes deployments
       - name: Verify Kubernetes deployments

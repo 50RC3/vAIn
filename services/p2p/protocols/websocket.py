@@ -2,11 +2,11 @@ import asyncio
 import websockets
 import json
 import logging
-from typing import Dict
+from typing import Dict, Optional
 from cryptography.fernet import Fernet
-from .services.result_logging import log_task_result, log_task_failure
-from .services.node_management import register_node, get_peers
-from .services.task_queue import distribute_task, validate_task_parameters
+from ...services.result_logging import log_task_result, log_task_failure
+from ...services.node_management import register_node, get_peers
+from ...services.task_queue import distribute_task, validate_task_parameters
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -21,6 +21,11 @@ class WebSocketServer:
     WebSocket server for handling real-time communication with peers, task distribution, and result logging.
     """
     
+    def __init__(self):
+        self.encryption_key = Fernet.generate_key()
+        self.cipher = Fernet(self.encryption_key)
+        self.connections: Dict[str, websockets.WebSocketServerProtocol] = {}
+
     async def register_node(self, websocket, node_id: str, node_ip: str, node_port: int):
         """
         Register the node with the network.
@@ -28,11 +33,12 @@ class WebSocketServer:
         try:
             # Register the node with the provided details
             register_node(node_id, node_ip, node_port)
+            self.connections[node_id] = websocket
             logger.info(f"Node {node_id} registered successfully.")
-            await websocket.send(json.dumps({"status": "success", "message": f"Node {node_id} registered successfully."}))
+            await websocket.send(self.encrypt_message({"status": "success", "message": f"Node {node_id} registered successfully."}))
         except Exception as e:
             logger.error(f"Error registering node {node_id}: {str(e)}")
-            await websocket.send(json.dumps({"status": "error", "message": str(e)}))
+            await websocket.send(self.encrypt_message({"status": "error", "message": str(e)}))
 
     async def handle_task_request(self, websocket, task_data: Dict):
         """
@@ -42,7 +48,7 @@ class WebSocketServer:
             # Validate task parameters
             if not validate_task_parameters(task_data):
                 log_task_failure(task_data["task_name"], task_data["target_node_id"], "Invalid parameters.")
-                await websocket.send(json.dumps({"status": "error", "message": "Invalid task parameters"}))
+                await websocket.send(self.encrypt_message({"status": "error", "message": "Invalid task parameters"}))
                 return
             
             # Process and distribute the task
@@ -52,10 +58,10 @@ class WebSocketServer:
             log_task_result(task_data["task_name"], task_response["success"], task_response["message"])
             
             # Send back the result to the client
-            await websocket.send(json.dumps(task_response))
+            await websocket.send(self.encrypt_message(task_response))
         except Exception as e:
             logger.error(f"Error processing task: {str(e)}")
-            await websocket.send(json.dumps({"status": "error", "message": str(e)}))
+            await websocket.send(self.encrypt_message({"status": "error", "message": str(e)}))
 
     async def handle_peer_discovery(self, websocket):
         """
@@ -64,10 +70,10 @@ class WebSocketServer:
         try:
             peers = get_peers()
             peer_list = [{"node_id": peer["node_id"], "node_ip": peer["node_ip"], "node_port": peer["node_port"]} for peer in peers]
-            await websocket.send(json.dumps({"status": "success", "peers": peer_list}))
+            await websocket.send(self.encrypt_message({"status": "success", "peers": peer_list}))
         except Exception as e:
             logger.error(f"Error discovering peers: {str(e)}")
-            await websocket.send(json.dumps({"status": "error", "message": str(e)}))
+            await websocket.send(self.encrypt_message({"status": "error", "message": str(e)}))
 
     async def handler(self, websocket, path):
         """
@@ -76,8 +82,12 @@ class WebSocketServer:
         try:
             async for message in websocket:
                 # Decrypt the incoming message
-                decrypted_message = cipher.decrypt(message.encode()).decode()
-                data = json.loads(decrypted_message)
+                decrypted_message = self.decrypt_message(message)
+                if decrypted_message is None:
+                    await websocket.send(self.encrypt_message({"status": "error", "message": "Decryption failed"}))
+                    continue
+                
+                data = decrypted_message
                 
                 # Handle task request or node registration
                 if "task_data" in data:
@@ -87,10 +97,24 @@ class WebSocketServer:
                 elif "discover_peers" in data:
                     await self.handle_peer_discovery(websocket)
                 else:
-                    await websocket.send(json.dumps({"status": "error", "message": "Unknown request"}))
+                    await websocket.send(self.encrypt_message({"status": "error", "message": "Unknown request"}))
         except Exception as e:
             logger.error(f"Error in WebSocket communication: {str(e)}")
-            await websocket.send(json.dumps({"status": "error", "message": str(e)}))
+            await websocket.send(self.encrypt_message({"status": "error", "message": str(e)}))
+
+    def encrypt_message(self, message: Dict) -> str:
+        try:
+            return self.cipher.encrypt(json.dumps(message).encode()).decode()
+        except Exception as e:
+            logger.error(f"Encryption error: {str(e)}")
+            return json.dumps({"status": "error", "message": "Encryption failed"})
+
+    def decrypt_message(self, encrypted_message: str) -> Optional[Dict]:
+        try:
+            return json.loads(self.cipher.decrypt(encrypted_message.encode()).decode())
+        except Exception as e:
+            logger.error(f"Decryption error: {str(e)}")
+            return None
 
 # --- WebSocket Client ---
 class WebSocketClient:

@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import logging
+import os
 from typing import List, Dict, Tuple
 from tensorflow.keras.preprocessing import image as keras_image
 from .services.result_logging import log_task_result, log_task_failure
@@ -13,10 +14,19 @@ logger = logging.getLogger(__name__)
 # Load YOLO or Faster R-CNN pre-trained models (you can switch models as needed)
 MODEL_TYPE = 'YOLO'  # Options: 'YOLO', 'FasterRCNN'
 
-# YOLO Configurations (YOLOv3 as an example)
-yolo_net = cv2.dnn.readNetFromDarknet('yolov3.cfg', 'yolov3.weights')
-layer_names = yolo_net.getLayerNames()
-output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
+# Update YOLO model paths to be relative to project
+MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+YOLO_CONFIG = os.path.join(MODEL_PATH, 'yolov3.cfg')
+YOLO_WEIGHTS = os.path.join(MODEL_PATH, 'yolov3.weights')
+
+# Update model loading with better error handling
+try:
+    yolo_net = cv2.dnn.readNetFromDarknet(YOLO_CONFIG, YOLO_WEIGHTS)
+    layer_names = yolo_net.getLayerNames()
+    output_layers = [layer_names[i - 1] for i in yolo_net.getUnconnectedOutLayers()]
+except Exception as e:
+    logger.error(f"Failed to load YOLO model: {e}")
+    raise RuntimeError("YOLO model initialization failed")
 
 # Faster R-CNN Setup (Optional)
 # from tensorflow import keras
@@ -152,6 +162,17 @@ def object_detection_task(image_path: str, model_type: str = 'YOLO') -> Dict:
     Detects objects in the image and logs the results.
     """
     try:
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+            
+        # Create output directory if it doesn't exist
+        output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'output')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Update output path to use the output directory
+        output_filename = f"output_{model_type}_{os.path.basename(image_path)}"
+        output_path = os.path.join(output_dir, output_filename)
+        
         # Load and preprocess image
         image = load_image(image_path)
         preprocessed_image = preprocess_image(image, model_type)
@@ -167,9 +188,10 @@ def object_detection_task(image_path: str, model_type: str = 'YOLO') -> Dict:
         # Draw bounding boxes on the image
         image_with_boxes = draw_bounding_boxes(image, detected_objects)
         
-        # Save processed image with bounding boxes
-        output_path = f"output_{model_type}_{image_path.split('/')[-1]}"
-        cv2.imwrite(output_path, image_with_boxes)
+        # Update image saving with error handling
+        if not cv2.imwrite(output_path, image_with_boxes):
+            raise IOError(f"Failed to save processed image to {output_path}")
+        
         logger.info(f"Processed image saved at {output_path}")
         
         # Log task result

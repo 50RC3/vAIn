@@ -1,27 +1,29 @@
 import psutil
 import logging
-from battery_optimizer import BatteryOptimizer
-from connection_handler import ConnectionHandler
+from typing import Dict, Any
+from vain.core.base import VAInComponent
+from .battery_optimizer import BatteryOptimizer
+from .connection_handler import ConnectionHandler
 
 logger = logging.getLogger("ResourceMonitor")
 
-class ResourceMonitor:
-    def __init__(self, cpu_threshold, memory_threshold, network_threshold, battery_threshold):
+class ResourceMonitor(VAInComponent):
+    def __init__(self, config: Dict[str, Any]):
         """
-        Initialize the resource monitor with specified thresholds.
-        
-        :param cpu_threshold: CPU usage percentage above which optimizations will be triggered.
-        :param memory_threshold: Memory usage percentage above which optimizations will be triggered.
-        :param network_threshold: Network usage in KB/s above which optimizations will be triggered.
-        :param battery_threshold: Battery percentage below which optimizations will be triggered.
+        Initialize with configuration from vAIn system.
         """
-        self.cpu_threshold = cpu_threshold
-        self.memory_threshold = memory_threshold
-        self.network_threshold = network_threshold
-        self.battery_threshold = battery_threshold
+        super().__init__(config)
+        self.cpu_threshold = config.get('cpu_threshold', 80)
+        self.memory_threshold = config.get('memory_threshold', 85)
+        self.network_threshold = config.get('network_threshold', 1000)
+        self.battery_threshold = config.get('battery_threshold', 20)
 
-        self.battery_optimizer = BatteryOptimizer(battery_threshold)
-        self.connection_handler = ConnectionHandler(network_threshold)
+        self.battery_optimizer = BatteryOptimizer(self.battery_threshold)
+        self.connection_handler = ConnectionHandler(
+            config.get('node_id'),
+            config.get('private_key'),
+            config.get('network_address')
+        )
 
     def get_cpu_usage(self):
         """
@@ -48,7 +50,7 @@ class ResourceMonitor:
         """
         return self.battery_optimizer.get_battery_percentage()
 
-    def optimize_resources(self):
+    async def optimize_resources(self):
         """
         Optimize resources based on the current system usage.
         """
@@ -89,3 +91,15 @@ class ResourceMonitor:
         """
         logger.info("Freeing memory by suspending non-essential tasks.")
         # Placeholder: Logic to suspend memory-heavy tasks
+
+    async def start(self):
+        """
+        Start monitoring as part of vAIn system.
+        """
+        try:
+            while self.is_running:
+                await self.optimize_resources()
+                await asyncio.sleep(self.config.get('monitor_interval', 60))
+        except Exception as e:
+            logger.error(f"Error in resource monitoring: {e}")
+            self.handle_error(e)

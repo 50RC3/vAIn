@@ -8,35 +8,44 @@ import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from .utils import load_data, process_data
+from typing import Optional, Dict, Any
 
 class AGIVisualizer:
-    def __init__(self, model, data_loader, task_manager):
+    def __init__(self, model: Any, data_loader: Any, task_manager: Any):
         """
         Initialize AGIVisualizer to track and visualize AGI system progress, performance, and task execution.
         :param model: The AGI model being developed and trained (can be a reinforcement learning model, NLP model, etc.)
         :param data_loader: DataLoader object to fetch and preprocess relevant data for visualization
         :param task_manager: TaskManager to access task history and performance for visual tracking
         """
+        if not all([model, data_loader, task_manager]):
+            raise ValueError("All arguments must be provided")
         self.model = model
         self.data_loader = data_loader
         self.task_manager = task_manager
 
-    def visualize_model_performance(self):
+    def visualize_model_performance(self) -> None:
         """
         Visualize the performance of the AGI model over time, including metrics such as accuracy, reward, loss, etc.
         """
-        performance_data = self.model.get_performance_metrics()  # Assuming model tracks metrics like accuracy, reward, etc.
-        epochs = np.arange(len(performance_data['loss']))
-        
-        plt.figure(figsize=(10, 6))
-        plt.plot(epochs, performance_data['loss'], label='Loss')
-        plt.plot(epochs, performance_data['accuracy'], label='Accuracy')
-        plt.title('Model Performance Over Time')
-        plt.xlabel('Epochs')
-        plt.ylabel('Metrics')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
+        try:
+            performance_data = self.model.get_performance_metrics()  # Assuming model tracks metrics like accuracy, reward, etc.
+            if not all(k in performance_data for k in ['loss', 'accuracy']):
+                raise KeyError("Performance data missing required metrics")
+            epochs = np.arange(len(performance_data['loss']))
+            
+            plt.figure(figsize=(10, 6))
+            plt.plot(epochs, performance_data['loss'], label='Loss')
+            plt.plot(epochs, performance_data['accuracy'], label='Accuracy')
+            plt.title('Model Performance Over Time')
+            plt.xlabel('Epochs')
+            plt.ylabel('Metrics')
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+        except Exception as e:
+            logging.error(f"Error in visualization: {e}")
+            plt.close()  # Cleanup on error
 
     def visualize_latent_space(self, data=None):
         """

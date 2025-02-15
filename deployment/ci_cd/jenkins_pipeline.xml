@@ -17,31 +17,35 @@
   <builders>
     <hudson.tasks.Shell>
       <command>#!/bin/bash
+        set -e  # Exit on any error
+
         # Pull the latest code from the repository
-        git pull origin root
+        git pull origin root || exit 1
 
         # Build Docker images for all services
-        docker-compose -f docker-compose.yml build
+        docker-compose -f docker-compose.yml build || exit 1
 
-        # Run unit tests or integration tests if needed
-        docker-compose -f docker-compose.yml run --rm api pytest --maxfail=1 --disable-warnings -q
+        # Run unit tests
+        docker-compose -f docker-compose.yml run --rm api pytest --maxfail=1 --disable-warnings -q || exit 1
 
-        # Deploy to Kubernetes
-        kubectl apply -f kubernetes/deployment.yaml
-        kubectl apply -f kubernetes/service.yaml
-        kubectl apply -f kubernetes/ingress.yaml
+        # Apply Kubernetes configurations
+        kubectl apply -f kubernetes/persistent-volumes.yaml || exit 1
+        kubectl apply -f kubernetes/deployment.yaml || exit 1
+        kubectl apply -f kubernetes/service.yaml || exit 1
 
-        # Optionally, deploy to production or staging environments
-        kubectl set image deployment/symbolic-reasoning symbolic-reasoning=50rc3/symbolic-reasoning:${GIT_COMMIT}
-        kubectl set image deployment/federated-learning federated-learning=50rc3/federated-learning:${GIT_COMMIT}
-        kubectl set image deployment/api api=50rc3/api:${GIT_COMMIT}
-        kubectl set image deployment/frontend frontend=50rc3/frontend:${GIT_COMMIT}
-        kubectl set image deployment/redis redis=50rc3/redis:${GIT_COMMIT}
-        kubectl set image deployment/db-neo4j db-neo4j=50rc3/db-neo4j:${GIT_COMMIT}
-        kubectl set image deployment/p2p-network p2p-network=50rc3/p2p-network:${GIT_COMMIT}
+        # Wait for deployments to be ready
+        kubectl rollout status deployment/symbolic-reasoning-deployment
+        kubectl rollout status deployment/federated-learning-deployment
+        kubectl rollout status deployment/api-deployment
+        kubectl rollout status deployment/frontend-deployment
 
-        # Verify Kubernetes deployments
-        kubectl get pods
+        # Verify all pods are running
+        if ! kubectl get pods | grep -v "Running"; then
+          echo "All pods are running successfully"
+        else
+          echo "Some pods are not running" >&2
+          exit 1
+        fi
       </command>
     </hudson.tasks.Shell>
   </builders>

@@ -8,12 +8,19 @@ from .services.result_logging import log_task_result, log_task_failure
 from .services.task_queue import schedule_task
 from .services.user_management import get_user_profile, update_user_profile
 from .services.context_manager import ContextManager
+from pathlib import Path
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# Load pre-trained SpaCy model for NLP processing
-nlp = spacy.load('en_core_web_sm')
+# Initialize SpaCy with try-catch
+try:
+    nlp = spacy.load('en_core_web_sm')
+except OSError:
+    logging.error("SpaCy model 'en_core_web_sm' not found. Installing...")
+    from spacy.cli import download
+    download('en_core_web_sm')
+    nlp = spacy.load('en_core_web_sm')
 
 # Initialize context manager for managing conversation state
 context_manager = ContextManager()
@@ -24,6 +31,8 @@ def clean_user_input(input_text: str) -> str:
     """
     Clean user input by removing unwanted characters and normalizing text.
     """
+    if not isinstance(input_text, str):
+        raise ValueError("Input must be a string")
     try:
         # Remove non-alphanumeric characters, convert to lowercase
         cleaned_text = input_text.strip().lower()

@@ -1,11 +1,17 @@
 /* frontend/src/styles/nodeDetails.css */
 
 .node-details {
-  border: 1px solid #ccc;
-  padding: 20px;
+  border: 1px solid #e0e0e0;
+  padding: 24px;
   margin: 20px 0;
-  border-radius: 8px;
-  background-color: #f9f9f9;
+  border-radius: 12px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.node-details:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .node-details h2 {
@@ -24,4 +30,45 @@
 
 .node-details li {
   padding: 5px 0;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 8px;
+  background-color: #f5f5f5;
+  border-radius: 6px;
+}
+
+.stat-label {
+  font-weight: 600;
+  margin-right: 8px;
+  color: #666;
+}
+
+.stat-value {
+  color: #333;
+}
+
+.status-connected {
+  color: #2e7d32;
+}
+
+.status-disconnected {
+  color: #c62828;
+}
+
+.loading {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.error {
+  padding: 20px;
+  color: #c62828;
+  background-color: #ffebee;
+  border-radius: 6px;
+  margin: 20px 0;
 }

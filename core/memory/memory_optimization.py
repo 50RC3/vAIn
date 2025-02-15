@@ -101,6 +101,10 @@ class MemoryOptimizer:
 
             if swap.percent > 90:  # If swap memory usage exceeds 90%, try freeing it
                 logger.warning(f"Swap memory usage is high ({swap.percent}%). Attempting to free swap memory...")
+                # The following commands require sudo and might not be portable
+                # Consider using a more portable and secure method
+                # For example, you could use the `subprocess` module to run the commands
+                # But be aware of the security implications of running external commands
                 os.system('sudo swapoff -a')  # Disable swap temporarily
                 os.system('sudo swapon -a')   # Re-enable swap
                 logger.info("Swap memory freed.")

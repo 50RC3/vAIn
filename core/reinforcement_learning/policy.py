@@ -20,6 +20,10 @@ class PolicyNetwork(nn.Module):
             hidden_layers (list): List of hidden layer sizes.
             activation (class): Activation function for the hidden layers.
         """
+        if state_dim <= 0 or action_dim <= 0:
+            raise ValueError("state_dim and action_dim must be positive integers")
+        if not hidden_layers:
+            raise ValueError("hidden_layers cannot be empty")
         super(PolicyNetwork, self).__init__()
         layers = []
         input_dim = state_dim
@@ -77,6 +81,12 @@ class RLPolicy:
             hidden_layers (list): List of hidden layer sizes.
             adaptive (bool): Whether to enable dynamic adaptation.
         """
+        if state_dim <= 0 or action_dim <= 0:
+            raise ValueError("state_dim and action_dim must be positive integers")
+        if not (0 <= gamma <= 1):
+            raise ValueError("gamma must be between 0 and 1")
+        if not (0 <= epsilon_start <= 1) or not (0 <= epsilon_end <= 1):
+            raise ValueError("epsilon values must be between 0 and 1")
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.gamma = gamma
@@ -108,6 +118,8 @@ class RLPolicy:
         Returns:
             int: The selected action.
         """
+        if not isinstance(state, (np.ndarray, torch.Tensor)):
+            raise TypeError("state must be a numpy array or torch tensor")
         if train and random.random() < self.epsilon:
             # Exploration: Choose a random action
             return random.randint(0, self.action_dim - 1)

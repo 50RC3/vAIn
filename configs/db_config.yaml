@@ -5,6 +5,15 @@ db_password: ${DB_PASSWORD}                  # Database password for the user
 redis_password: ${REDIS_PASSWORD}            # Password for the Redis database
 backup_encryption_key: ${BACKUP_ENCRYPTION_KEY} # Key for encrypting backups
 
+# Check if environment variables are set
+# You can add this logic to your application startup to ensure these variables are available.
+# Example (Python):
+# import os
+# required_vars = ['DB_USER', 'DB_PASSWORD', 'REDIS_PASSWORD', 'BACKUP_ENCRYPTION_KEY']
+# for var in required_vars:
+#   if var not in os.environ:
+#     raise EnvironmentError(f"Required environment variable {var} is not set.")
+
 # Default Database Configuration (Primary Database)
 default:
   db_engine: postgresql                      # Database engine (e.g., PostgreSQL)

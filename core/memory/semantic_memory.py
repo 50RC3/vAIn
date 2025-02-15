@@ -7,15 +7,31 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 class SemanticMemory:
-    def __init__(self):
+    def __init__(self, max_size: int = 1000):
         """Initialize the memory store for vAIn context."""
         self.memory: Dict[str, Any] = {}  # Stores keys (e.g., topics) with values (e.g., AI interactions)
-        logger.info("Semantic memory initialized.")
+        self.max_size = max_size
+        logger.info("Semantic memory initialized with max size: %d", max_size)
 
-    def add_memory(self, key: str, value: Any) -> None:
-        """Add a new memory entry, which could include AI conversation context."""
-        self.memory[key] = value
-        logger.debug(f"Memory added: {key} -> {value}")
+    def add_memory(self, key: str, value: Any) -> bool:
+        """Add a new memory entry with size limit check."""
+        if not isinstance(key, str):
+            logger.error("Key must be a string")
+            return False
+            
+        if len(self.memory) >= self.max_size:
+            logger.error("Memory size limit reached")
+            return False
+            
+        try:
+            # Verify value is JSON serializable
+            json.dumps(value)
+            self.memory[key] = value
+            logger.debug("Memory added: %s -> %s", key, value)
+            return True
+        except (TypeError, ValueError) as e:
+            logger.error("Invalid value type: %s", str(e))
+            return False
 
     def retrieve_memory(self, key: str) -> Optional[Any]:
         """Retrieve a memory entry by key."""
@@ -38,14 +54,16 @@ class SemanticMemory:
         logger.warning(f"Memory key '{key}' not found for removal.")
         return False
 
-    def save_memory(self, filename: str) -> None:
-        """Save the current memory to a JSON file for persistent storage."""
+    def save_memory(self, filename: str) -> bool:
+        """Save memory with better error handling."""
         try:
-            with open(filename, 'w') as f:
-                json.dump(self.memory, f)
-            logger.info(f"Memory saved to {filename}")
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(self.memory, f, ensure_ascii=False, indent=2)
+            logger.info("Memory saved to %s", filename)
+            return True
         except Exception as e:
-            logger.error(f"Error saving memory to {filename}: {e}")
+            logger.error("Error saving memory to %s: %s", filename, str(e))
+            return False
 
     def load_memory(self, filename: str) -> None:
         """Load memory from a JSON file into the AI's memory store."""
@@ -84,7 +102,10 @@ class SemanticMemory:
         """Process natural language input and query or update memory based on context."""
         # Example: Use an NLP model (e.g., GPT-3 or a custom model) to process the input and determine intent
         # For now, this is a simple placeholder for NLP interaction
-        response = f"Processing input: {input_text}"
+        # Here, you would integrate with an NLP library to understand the input_text
+        # and then interact with the memory accordingly.
+        # For example, you might use the input_text to query the memory, or to add new information to the memory.
+        response = f"NLP processing is not fully implemented. Input received: {input_text}"
         logger.debug(f"NLP response generated: {response}")
         return response
 

@@ -1,47 +1,72 @@
 // frontend/src/components/Dashboard.js
 
-import React, { useState, useEffect } from "react";
-
+import React, { useState, useEffect, useCallback } from "react";
 import P2PNetworkStats from "./P2PNetworkStats";
 import Chatbot from "./Chatbot";
+import "../styles/dashboard.css";
 
 const Dashboard = () => {
   const [taskUpdates, setTaskUpdates] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [webSocket, setWebSocket] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Function to handle WebSocket connection and listen for messages
+  const connectWebSocket = useCallback(() => {
+    try {
+      const ws = new WebSocket("ws://localhost:8000/ws/tasks");
+
+      ws.onopen = () => {
+        setIsConnected(true);
+        setIsLoading(false);
+        setError(null);
+        setRetryCount(0);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === "taskUpdate") {
+            setTaskUpdates((prevUpdates) => [message.payload, ...prevUpdates].slice(0, 50));
+          }
+        } catch (e) {
+          console.error("Failed to parse WebSocket message:", e);
+        }
+      };
+
+      ws.onclose = () => {
+        setIsConnected(false);
+        if (retryCount < 5) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            connectWebSocket();
+          }, 3000 * Math.pow(2, retryCount));
+        } else {
+          setError("Connection lost. Please refresh the page.");
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setError("Failed to connect to the server.");
+      };
+
+      return ws;
+    } catch (error) {
+      setError("Failed to establish connection.");
+      setIsLoading(false);
+      return null;
+    }
+  }, [retryCount]);
+
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws/tasks");
-
-    ws.onopen = () => {
-      setIsConnected(true);
-      console.log("Connected to WebSocket");
-    };
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (message.type === "taskUpdate") {
-        setTaskUpdates((prevUpdates) => [
-          ...prevUpdates,
-          message.payload,
-        ]);
-      }
-    };
-
-    ws.onclose = () => {
-      setIsConnected(false);
-      console.log("Disconnected from WebSocket");
-    };
-
-    setWebSocket(ws);
-
+    const ws = connectWebSocket();
     return () => {
       if (ws) {
         ws.close();
       }
     };
-  }, []);
+  }, [connectWebSocket]);
 
   // Render task updates
   const renderTaskUpdates = () => {
@@ -61,7 +86,11 @@ const Dashboard = () => {
         <span>Status: {isConnected ? "Connected" : "Disconnected"}</span>
       </div>
       <div className="task-updates-container">
-        {isConnected ? (
+        {isLoading ? (
+          <p>Loading...</p>
+        ) : error ? (
+          <p>{error}</p>
+        ) : isConnected ? (
           renderTaskUpdates()
         ) : (
           <p>Waiting for task updates...</p>

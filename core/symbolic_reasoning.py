@@ -71,12 +71,17 @@ class PropositionalLogic:
 
     def evaluate_expression(self, expression: str) -> bool:
         """
-        Evaluates a logical expression using sympy.
-        :param expression: A logical expression to evaluate (string)
-        :return: Evaluated result (boolean)
+        Evaluates a logical expression with improved error handling.
         """
+        if not self.variables:
+            raise ValueError("No variables defined in the logic system")
+
         expr = self._parse_expression(expression)
-        return bool(expr.subs(self.variables))
+        try:
+            result = bool(expr.subs(self.variables))
+            return result
+        except Exception as e:
+            raise ValueError(f"Error evaluating expression: {e}")
 
     def generate_truth_table(self, expression: str) -> None:
         """
@@ -111,12 +116,27 @@ class PropositionalLogic:
 
     def _parse_expression(self, expression: str):
         """
-        Parses a logical expression into a sympy object.
-        :param expression: Logical expression (string)
-        :return: Parsed sympy object
+        Parses a logical expression into a sympy object with improved validation.
         """
+        if not expression or not isinstance(expression, str):
+            raise ValueError("Expression must be a non-empty string")
+
+        # Sanitize input
+        expression = expression.strip()
+        
+        # Validate basic syntax
+        if not any(op in expression for op in ['and', 'or', 'not', 'Nand', 'implies']):
+            if expression not in self.variables:
+                raise ValueError(f"Invalid expression: {expression}")
+
         # Replace user-friendly operators with SymPy compatible ones
-        expression = expression.replace("Nand", "Not(And").replace(")", " )")
+        expression = (expression
+            .replace("Nand", "Not(And")
+            .replace(")", " )")
+            .replace("AND", "and")
+            .replace("OR", "or")
+            .replace("NOT", "not"))
+
         try:
             return parse_expr(expression, local_dict=self._get_symbols())
         except Exception as e:

@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import logging
+import os
 from typing import List, Dict
 from skimage.feature import hog
 from skimage import exposure
@@ -105,6 +106,21 @@ def process_image_task(image_path: str, target_size: tuple = (224, 224), feature
     Processes an image based on the requested feature extraction type.
     """
     try:
+        if not os.path.exists(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+            
+        # Create output directory if it doesn't exist
+        output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'output')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Update output path
+        output_filename = f"processed_{feature_type}_{os.path.basename(image_path)}"
+        save_path = os.path.join(output_dir, output_filename)
+        
+        # Validate image dimensions
+        if target_size[0] <= 0 or target_size[1] <= 0:
+            raise ValueError("Invalid target size dimensions")
+            
         # Load and preprocess image
         image = load_image(image_path)
         resized_image = resize_image(image, target_size)
@@ -122,17 +138,21 @@ def process_image_task(image_path: str, target_size: tuple = (224, 224), feature
             raise ValueError("Unsupported feature type requested.")
         
         # Save processed image (optional)
-        save_path = f"processed_{feature_name}_{image_path.split('/')[-1]}"
         save_processed_image(resized_image, save_path)
         
         # Log task result
         log_task_result(image_path, True, f"Feature extraction ({feature_name}) successful.")
         
         # Return the extracted features
-        return {"status": "success", "features": features, "feature_name": feature_name}
+        return {
+            "status": "success",
+            "features": features,
+            "feature_name": feature_name,
+            "output_path": save_path
+        }
     
     except Exception as e:
-        logger.error(f"Error processing image {image_path}: {e}")
+        logger.error(f"Error in image processing task: {e}")
         log_task_failure(image_path, feature_type, str(e))
         return {"status": "error", "message": str(e)}
 

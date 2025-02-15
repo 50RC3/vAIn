@@ -65,6 +65,9 @@ class MemoryController:
             'short_term_memory_usage': 0,
         }
 
+        self.distributed_sync_enabled = True
+        self.peer_memory_nodes = set()
+
     def load_config(self, config_path):
         """Load memory configuration from file"""
         try:
@@ -240,4 +243,21 @@ class MemoryController:
             self.logger.info("Memory optimization completed.")
         except Exception as e:
             self.logger.error(f"Error optimizing memory: {e}")
+
+    def register_peer_memory_node(self, node_id: str):
+        """Register a peer node for distributed memory synchronization."""
+        self.peer_memory_nodes.add(node_id)
+        logger.info(f"Registered peer memory node: {node_id}")
+
+    def distribute_memory_update(self, memory_type: str, memory_id: str):
+        """Distribute memory updates to peer nodes."""
+        if not self.distributed_sync_enabled:
+            return
+
+        update_data = self.retrieve_data(memory_type, memory_id)
+        for peer_node in self.peer_memory_nodes:
+            try:
+                self._send_memory_update(peer_node, memory_type, memory_id, update_data)
+            except Exception as e:
+                logger.error(f"Failed to sync with peer {peer_node}: {e}")
 

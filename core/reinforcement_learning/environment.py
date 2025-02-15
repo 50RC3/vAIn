@@ -17,6 +17,13 @@ class EvolvingEnvironment:
             max_steps (int): Maximum number of steps per episode.
             evolution_rate (float): Probability of environment evolving per step.
         """
+        if not isinstance(grid_size, tuple) or len(grid_size) != 2:
+            raise ValueError("grid_size must be a tuple of length 2")
+        if max_steps <= 0:
+            raise ValueError("max_steps must be positive")
+        if not (0 <= evolution_rate <= 1):
+            raise ValueError("evolution_rate must be between 0 and 1")
+
         self.grid_size = grid_size
         self.max_steps = max_steps
         self.evolution_rate = evolution_rate
@@ -55,6 +62,11 @@ class EvolvingEnvironment:
             done (bool): Whether the episode is finished.
             info (dict): Additional information about the environment.
         """
+        if not isinstance(action, (int, np.integer)):
+            raise TypeError("action must be an integer")
+        if not 0 <= action < 4:
+            raise ValueError("action must be between 0 and 3")
+
         if self.done:
             return self._get_state_representation(), 0, True, {}
 
@@ -194,4 +206,4 @@ if __name__ == "__main__":
     Complex Reward Signals: Introduce composite rewards involving dependencies on time, action sequences, or other agents.
     State Abstraction: Provide partial observations, requiring the agent to infer hidden states.
     Adaptable Evolution Rates: Dynamically adjust the rate of evolution based on agent performance.
-    """    
+    """

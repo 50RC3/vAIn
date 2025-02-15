@@ -45,3 +45,21 @@ security:
     enabled: true
     methods:
       - AES-256
+
+monitoring:
+  enabled: true
+  tools:
+    - prometheus
+    - grafana
+  metrics:
+    cpu_usage: true
+    memory_usage: true
+    disk_io: true
+    network_traffic: true
+  alerts:
+    cpu_high:
+      threshold: 90
+      notification_channel: slack
+    memory_high:
+      threshold: 90
+      notification_channel: email

@@ -1,41 +1,51 @@
 # analytics/insights.py
+from pathlib import Path
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
+import logging
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class Insights:
-    def __init__(self, data_source):
-        """
-        Initialize the Insights module with the data source.
+    def __init__(self, data_source: str):
+        # Add model cache directory handling
+        self.model_cache_dir = Path(os.getenv('MODEL_CACHE_DIR', 'cache/models'))
+        self.model_cache_dir.mkdir(parents=True, exist_ok=True)
         
-        :param data_source: Path to the data file or database connection.
-        """
-        self.data_source = data_source
+        if not data_source:
+            raise ValueError("Data source must be provided")
+        
+        self.data_source = Path(data_source)
+        if not self.data_source.exists():
+            raise FileNotFoundError(f"Data source not found: {data_source}")
+            
         self.data = self.load_data()
+        if self.data.empty:
+            raise ValueError("No data loaded")
+            
         self.cleaned_data = self.clean_data(self.data)
 
-    def load_data(self):
-        """
-        Load data from the given source (e.g., CSV, database, etc.).
-        
-        :return: Loaded data in a pandas DataFrame format.
-        """
+    def load_data(self) -> pd.DataFrame:
         try:
-            if isinstance(self.data_source, str):
-                # Assuming the data source is a file path (CSV, Excel, etc.)
-                if self.data_source.endswith('.csv'):
-                    return pd.read_csv(self.data_source)
-                elif self.data_source.endswith('.xlsx'):
-                    return pd.read_excel(self.data_source)
-                else:
-                    raise ValueError("Unsupported file format. Use CSV or Excel.")
+            # Add debug logging based on environment
+            if os.getenv('API_DEBUG', 'False').lower() == 'true':
+                logging.debug(f"Loading data from: {self.data_source}")
+            
+            suffix = self.data_source.suffix.lower()
+            if suffix == '.csv':
+                return pd.read_csv(self.data_source)
+            elif suffix in ['.xlsx', '.xls']:
+                return pd.read_excel(self.data_source)
             else:
-                # Add logic for connecting to a database or API if needed
-                pass
+                raise ValueError(f"Unsupported file format: {suffix}")
         except Exception as e:
-            print(f"Error loading data: {e}")
+            logging.error(f"Error loading data: {e}")
             return pd.DataFrame()
 
     def clean_data(self, data):

@@ -4,16 +4,16 @@ import json
 import websockets
 from cryptography.fernet import Fernet
 from fastapi import HTTPException
-from typing import List, Dict, Any
-from ..services.task_queue import distribute_task, validate_task_parameters
-from ..services.result_logging import log_task_result, log_task_failure
-from ..services.task_scheduler import schedule_task, cancel_scheduled_task
-from ..utils import get_node_id, get_peers, register_node, check_peer_health
-from pydantic import BaseModel
-import time
 
-# Set up logging
-logger = logging.getLogger(__name__)
+from typing import List, Dict, Any, Optional, Tuple
+from ..utils.validators import validate_task_parameters
+from ..utils.logger import setup_logger
+from ..utils.crypto import encrypt_message, decrypt_message
+from ..models.network_models import Peer, TaskRequest, TaskResponse
+from ..config import WEBSOCKET_TIMEOUT, MAX_RETRIES
+
+# Initialize logger
+logger = setup_logger(__name__)
 
 # Encryption key for secure communication
 encryption_key = Fernet.generate_key()
@@ -33,12 +33,61 @@ class TaskRequest(BaseModel):
     target_node_id: str
     retry_count: int = 0  # Number of retries attempted
 
+    @validator('parameters')
+    def validate_params(cls, v):
+        if not isinstance(v, dict):
+            raise ValueError('Parameters must be a dictionary')
+        return v
+
 class TaskResponse(BaseModel):
     """Schema for task responses to peers."""
     task_name: str
     result: Dict[str, Any]
     success: bool
     message: str
+
+async def task_retry(task_id: str) -> Tuple[bool, Dict[str, Any]]:
+    """
+    Implement task retry logic with backoff mechanism.
+    
+    Args:
+    - task_id: The ID of the task to retry
+    
+    Returns:
+    - Tuple[bool, Dict]: Success status and result/error message
+    """
+    try:
+        attempt = 0
+        while attempt < MAX_RETRIES:
+            try:
+                # Get task details from storage
+                task_details = await get_task_details(task_id)
+                if not task_details:
+                    return False, {"error": "Task not found"}
+
+                # Attempt to execute the task
+                result = await distribute_task_to_peer(
+                    task_details["task_request"],
+                    task_details["peer_ip"],
+                    task_details["peer_port"]
+                )
+                
+                if result and result.success:
+                    return True, result.dict()
+                
+                # Exponential backoff
+                await asyncio.sleep(2 ** attempt)
+                attempt += 1
+                
+            except Exception as e:
+                logger.warning(f"Retry attempt {attempt + 1} failed: {str(e)}")
+                continue
+                
+        return False, {"error": f"Task failed after {MAX_RETRIES} attempts"}
+        
+    except Exception as e:
+        logger.error(f"Error in task retry: {str(e)}")
+        return False, {"error": str(e)}
 
 # --- Network Communication Functions ---
 async def secure_send(peer_ip: str, peer_port: int, message: Dict[str, Any]) -> None:
@@ -54,14 +103,23 @@ async def secure_send(peer_ip: str, peer_port: int, message: Dict[str, Any]) -> 
     - None
     """
     try:
-        async with websockets.connect(f"ws://{peer_ip}:{peer_port}") as websocket:
-            # Encrypt the message
-            encrypted_message = cipher.encrypt(json.dumps(message).encode())
-            await websocket.send(encrypted_message)
-            logger.info(f"Sent secure message to {peer_ip}:{peer_port}")
+        uri = f"ws://{peer_ip}:{peer_port}"
+        async with websockets.connect(uri, timeout=WEBSOCKET_TIMEOUT) as websocket:
+            encrypted_message = encrypt_message(message)
+            await asyncio.wait_for(
+                websocket.send(encrypted_message),
+                timeout=WEBSOCKET_TIMEOUT
+            )
+            logger.info(f"Sent secure message to {uri}")
+    except asyncio.TimeoutError:
+        logger.error(f"Timeout while sending message to {peer_ip}:{peer_port}")
+        raise HTTPException(status_code=504, detail="Connection timeout")
+    except websockets.exceptions.WebSocketException as e:
+        logger.error(f"WebSocket error: {str(e)}")
+        raise HTTPException(status_code=503, detail="WebSocket connection failed")
     except Exception as e:
-        logger.error(f"Failed to send message to {peer_ip}:{peer_port}. Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to send message to {peer_ip}:{peer_port}. {str(e)}")
+        logger.error(f"Failed to send message: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def secure_receive(websocket: websockets.WebSocketServerProtocol) -> Dict[str, Any]:
     """
@@ -141,7 +199,7 @@ async def discover_peers() -> List[Peer]:
         raise HTTPException(status_code=500, detail="Failed to discover peers.")
 
 # --- Task Distribution and Management ---
-async def distribute_task_to_peer(task_request: TaskRequest, peer_ip: str, peer_port: int) -> TaskResponse:
+async def distribute_task_to_peer(task_request: TaskRequest, peer_ip: str, peer_port: int) -> Optional[TaskResponse]:
     """
     Distribute task to a peer and get the result.
     
@@ -154,30 +212,16 @@ async def distribute_task_to_peer(task_request: TaskRequest, peer_ip: str, peer_
     - TaskResponse: The response from the peer after processing the task
     """
     try:
-        # Send the task to the peer node securely
-        await secure_send(peer_ip, peer_port, task_request.dict())
-        
-        # Wait for the task response
-        response = await secure_receive(peer_ip, peer_port)
-        
-        # Log the task result
-        task_response = TaskResponse(**response)
-        log_task_result(task_request.task_name, task_response.success, task_response.message)
-        
-        # Return the task response
-        logger.info(f"Task {task_request.task_name} completed successfully on peer {peer_ip}:{peer_port}.")
-        return task_response
+        async with websockets.connect(f"ws://{peer_ip}:{peer_port}", timeout=10) as websocket:
+            await secure_send(websocket, task_request.dict())
+            response = await secure_receive(websocket)
+            if response:
+                return TaskResponse(**response)
+    except websockets.exceptions.WebSocketException as e:
+        logger.error(f"WebSocket error with peer {peer_ip}:{peer_port}: {str(e)}")
     except Exception as e:
-        logger.error(f"Error distributing task {task_request.task_name} to peer {peer_ip}:{peer_port}: {str(e)}")
-        log_task_failure(task_request.task_name, task_request.target_node_id, str(e))
-        
-        # Retry if task has not reached maximum retries
-        if task_request.retry_count < 3:
-            logger.info(f"Retrying task {task_request.task_name}, attempt {task_request.retry_count + 1}.")
-            task_request.retry_count += 1
-            return await distribute_task_to_peer(task_request, peer_ip, peer_port)
-        
-        raise HTTPException(status_code=500, detail=f"Error distributing task: {str(e)}")
+        logger.error(f"Error in task distribution: {str(e)}")
+    return None
 
 async def retry_failed_task(task_id: str) -> Dict[str, Any]:
     """

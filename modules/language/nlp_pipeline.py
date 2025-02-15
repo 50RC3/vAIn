@@ -9,18 +9,54 @@ from nltk.corpus import stopwords
 from typing import List, Tuple, Dict, Any
 from .services.result_logging import log_task_result, log_task_failure
 from .services.task_queue import schedule_task
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get configuration from environment variables
+SPACY_MODEL = os.getenv('SPACY_MODEL', 'en_core_web_sm')
+NLTK_DATA_PATH = os.getenv('NLTK_DATA_PATH')
+MAX_SEQUENCE_LENGTH = int(os.getenv('MAX_SEQUENCE_LENGTH', '512'))
+
+# Set NLTK data path
+if NLTK_DATA_PATH:
+    nltk.data.path.append(NLTK_DATA_PATH)
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Verify NLTK downloads
+def verify_nltk_downloads():
+    required_data = ['punkt', 'stopwords', 'averaged_perceptron_tagger']
+    for item in required_data:
+        try:
+            nltk.data.find(f'tokenizers/{item}')
+        except LookupError:
+            nltk.download(item)
+
+verify_nltk_downloads()
+
+class NLPPipeline:
+    def __init__(self):
+        try:
+            self.nlp = spacy.load(SPACY_MODEL)
+        except OSError:
+            logging.error(f"SpaCy model {SPACY_MODEL} not found. Installing...")
+            from spacy.cli import download
+            download(SPACY_MODEL)
+            self.nlp = spacy.load(SPACY_MODEL)
+
 # --- NLP Pipeline Setup ---
 # Load pre-trained SpaCy NLP model (for NER and Dependency Parsing)
-nlp = spacy.load('en_core_web_sm')
-
-# Download necessary NLTK datasets (e.g., punkt, stopwords, averaged_perceptron_tagger)
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('averaged_perceptron_tagger')
+try:
+    nlp = spacy.load(SPACY_MODEL)
+except OSError:
+    logging.error(f"SpaCy model {SPACY_MODEL} not found. Installing...")
+    from spacy.cli import download
+    download(SPACY_MODEL)
+    nlp = spacy.load(SPACY_MODEL)
 
 # --- Preprocessing ---
 def clean_text(text: str) -> str:
