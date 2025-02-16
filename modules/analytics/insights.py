@@ -8,6 +8,9 @@ import seaborn as sns
 import logging
 import os
 from dotenv import load_dotenv
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 # Load environment variables
 load_dotenv()
@@ -30,23 +33,34 @@ class Insights:
             raise ValueError("No data loaded")
             
         self.cleaned_data = self.clean_data(self.data)
+        self.scaler = StandardScaler()
+        self.pca = PCA(n_components=2)
+        self.kmeans = KMeans(n_clusters=3)
 
     def load_data(self) -> pd.DataFrame:
         try:
-            # Add debug logging based on environment
-            if os.getenv('API_DEBUG', 'False').lower() == 'true':
-                logging.debug(f"Loading data from: {self.data_source}")
-            
             suffix = self.data_source.suffix.lower()
+            data = None
+            
             if suffix == '.csv':
-                return pd.read_csv(self.data_source)
+                data = pd.read_csv(self.data_source)
             elif suffix in ['.xlsx', '.xls']:
-                return pd.read_excel(self.data_source)
+                data = pd.read_excel(self.data_source)
             else:
                 raise ValueError(f"Unsupported file format: {suffix}")
+            
+            # Validate data structure
+            required_columns = ['task_type', 'execution_time', 'interaction_timestamp', 'user_id', 'status']
+            missing_columns = [col for col in required_columns if col not in data.columns]
+            
+            if missing_columns:
+                raise ValueError(f"Missing required columns: {missing_columns}")
+                
+            return data
+            
         except Exception as e:
             logging.error(f"Error loading data: {e}")
-            return pd.DataFrame()
+            raise
 
     def clean_data(self, data):
         """
@@ -131,6 +145,45 @@ class Insights:
         except KeyError as e:
             print(f"Error generating task summary: {e}")
             return pd.DataFrame()
+
+    def analyze_patterns(self) -> dict:
+        """Analyze patterns in the data using ML techniques"""
+        try:
+            # Prepare numerical data
+            numerical_data = self.cleaned_data.select_dtypes(include=[np.number])
+            
+            if numerical_data.empty:
+                raise ValueError("No numerical data available for analysis")
+                
+            if numerical_data.shape[0] < 3:
+                raise ValueError("Insufficient data for pattern analysis")
+            
+            # Handle infinite values
+            numerical_data = numerical_data.replace([np.inf, -np.inf], np.nan)
+            numerical_data = numerical_data.fillna(numerical_data.mean())
+            
+            scaled_data = self.scaler.fit_transform(numerical_data)
+            
+            # Adjust number of components based on data
+            n_components = min(2, numerical_data.shape[1])
+            self.pca = PCA(n_components=n_components)
+            
+            pca_result = self.pca.fit_transform(scaled_data)
+            
+            # Adjust number of clusters based on data size
+            n_clusters = min(3, numerical_data.shape[0] // 2)
+            self.kmeans = KMeans(n_clusters=n_clusters)
+            clusters = self.kmeans.fit_predict(scaled_data)
+            
+            return {
+                'pca_components': pca_result.tolist(),
+                'clusters': clusters.tolist(),
+                'explained_variance': self.pca.explained_variance_ratio_.tolist()
+            }
+            
+        except Exception as e:
+            logging.error(f"Error in pattern analysis: {e}")
+            raise
 
 # Example Usage
 if __name__ == "__main__":

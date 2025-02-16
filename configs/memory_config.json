@@ -228,5 +228,45 @@
       "parameter_tuning", "algorithm_selection", "architecture_modification"
     ],
     "evaluation_frequency": "daily" 
+  },
+  "max_memory_usage": 0.8,
+  "per_component_limit": 0.2,
+  "learning_algorithm": {
+    "type": "federated",
+    "batch_size": 32,
+    "learning_rate": 0.001
+  },
+  "self_awareness": {
+    "monitoring_interval": 60,
+    "alert_threshold": 0.9
+  },
+  "cognitive": {
+    "model_type": "transformer",
+    "layers": 12,
+    "attention_heads": 8
+  },
+  "episodic": {
+    "max_episodes": 1000,
+    "retention_period": 86400
+  },
+  "semantic": {
+    "indexing_method": "LSH",
+    "vector_dimension": 256
+  },
+  "procedural": {
+    "max_procedures": 500,
+    "cache_size": 100
+  },
+  "multi_modal": {
+    "supported_modes": ["text", "image", "audio"],
+    "max_size_per_mode": 1024
+  },
+  "long_term": {
+    "storage_type": "distributed",
+    "compression_enabled": true
+  },
+  "short_term": {
+    "max_items": 100,
+    "ttl": 3600
   }
 }

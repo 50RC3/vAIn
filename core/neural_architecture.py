@@ -18,6 +18,8 @@ class EvolutionaryNAS:
         self.architecture_probabilities = {}
         self.quantum_optimizer = QuantumInspiredOptimizer()
         self.tensor_processor = TensorNetworkProcessor()
+        self.domain_specific_architectures = {}
+        self.cross_domain_adapter = CrossDomainArchitectureAdapter()
         
     def initialize_population(self):
         """Create initial population of neural architectures"""
@@ -101,6 +103,17 @@ class EvolutionaryNAS:
                 modified_arch['layers'][layer_idx]['units'] = int(current_units * np.random.choice([0.5, 1.5]))
             else:
                 modified_arch['layers'][layer_idx]['activation'] = np.random.choice(['relu', 'tanh', 'elu'])
+        
+        # Consider cross-domain adaptations
+        if len(self.domain_specific_architectures) > 0:
+            source_domain = np.random.choice(list(self.domain_specific_architectures.keys()))
+            source_arch = self.domain_specific_architectures[source_domain]
+            modified_arch = self.adapt_architecture_for_domain(
+                source_arch,
+                source_domain,
+                self.current_domain
+            )
+            return modified_arch
         
         return modified_arch
 
@@ -194,3 +207,12 @@ class EvolutionaryNAS:
         )
         
         return np.random.choice(len(probs), size=n, p=result.flatten())
+    
+    def adapt_architecture_for_domain(self, architecture: Dict, source_domain: str, target_domain: str) -> Dict:
+        """Adapt neural architecture for different domains"""
+        return self.cross_domain_adapter.adapt(
+            architecture,
+            source_domain,
+            target_domain,
+            self.architecture_history
+        )
