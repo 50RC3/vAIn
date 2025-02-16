@@ -17,6 +17,8 @@ class SelfImprovementModule:
         self.task_scheduler = TaskScheduler()
         self.system_health = SystemHealth()
         self.code_evolution = CodeEvolution(repo_path=".")
+        self.neural_pathway_optimizer = NeuralPathwayOptimizer()
+        self.domain_transfer_metrics = {}
         
     def evaluate_performance(self) -> Dict[str, float]:
         """Evaluate overall system performance"""
@@ -53,6 +55,9 @@ class SelfImprovementModule:
             
             # Optimize inefficient code
             self._optimize_code_efficiency()
+            
+            # Optimize neural pathways
+            self._optimize_neural_pathways()
     
     def _needs_improvement(self) -> bool:
         """Determine if system needs improvement"""
@@ -129,3 +134,17 @@ class SelfImprovementModule:
                 inefficient[filepath] = self._create_metric(filepath)
                 
         return inefficient
+    
+    def _optimize_neural_pathways(self):
+        """Optimize neural pathways for better cross-domain transfer"""
+        domains = self.meta_learner.get_active_domains()
+        
+        for source_domain in domains:
+            for target_domain in domains:
+                if source_domain != target_domain:
+                    efficiency = self.neural_pathway_optimizer.optimize_pathway(
+                        source_domain,
+                        target_domain,
+                        self.performance_history
+                    )
+                    self.domain_transfer_metrics[(source_domain, target_domain)] = efficiency

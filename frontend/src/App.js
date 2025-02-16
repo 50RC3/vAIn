@@ -14,6 +14,8 @@ import { fetchModelPerformance, fetchTaskData, fetchVisualizationData } from './
 import { AGIContext } from './contexts/AGIContext';
 import { Notification } from './components/Notification';
 import { WebSocketService } from './services/websocket'; // WebSocket service for real-time updates
+import Chatbot from './components/Chatbot';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const [modelPerformance, setModelPerformance] = useState(null);
@@ -106,6 +108,11 @@ function App() {
           setNotifications(prevNotifications => prevNotifications.filter((_, i) => i !== index));
         }} 
       />
+      <div className="app-container">
+        <ErrorBoundary>
+          <Chatbot />
+        </ErrorBoundary>
+      </div>
     </AGIContext.Provider>
   );
 }

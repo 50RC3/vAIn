@@ -28,6 +28,22 @@ backup_interval = 3600
 def mock_dataset():
     return [{"input": "test", "output": "result"}] * 10
 
+@pytest.fixture(scope="function")
+def complex_mock_dataset():
+    """Provide more realistic test data"""
+    return [
+        {"input": "complex query", "output": "detailed result", "metadata": {"confidence": 0.9}},
+        {"input": "", "output": "error", "metadata": {"error": "empty input"}},
+        # Add edge cases
+    ]
+
+@pytest.fixture(autouse=True)
+def cleanup_after_test():
+    """Ensure cleanup after each test"""
+    yield
+    # Cleanup code here
+    cleanup_test_files()
+
 @pytest.fixture
 def hive_mind(temp_config_file, mock_dataset):
     hm = HiveMind(config_file=temp_config_file)
