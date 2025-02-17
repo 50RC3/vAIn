@@ -1,7 +1,8 @@
 # vAIn: A Decentralized AGI System
 
 ## Overview
-vAIn (Virtual Artificial Intelligence Network) is a decentralized Artificial General Intell```python
+vAIn (Virtual Artificial Intelligence Network) is a decentralized Artificial General Intell
+```python
 from vain.node import NodeConfiguration, SecurityConfig, FederatedConfig, VAInNode
 
 class ComputeNode:
