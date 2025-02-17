@@ -1,6 +1,8 @@
 import json
 import logging
 from datetime import datetime
+from typing import Dict, Any
+import psutil
 from .episodic_memory import EpisodicMemory
 from .semantic_memory import SemanticMemory
 from .procedural_memory import ProceduralMemory
@@ -13,7 +15,7 @@ from .memory_compression import compress_memory, decompress_memory
 from .memory_cleaner import MemoryCleaner
 from .memory_monitor import MemoryMonitor
 from .memory_sync import MemorySync
-from .memory_validation import validate_memory
+from .memory_validation import MemoryValidation
 from .memory_backup import MemoryBackup
 from .memory_events import MemoryEvents
 from .memory_optimization import MemoryOptimization
@@ -25,6 +27,22 @@ from .self_awareness import SelfAwareness
 # Set up logging for the memory controller module
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+class ResourceMonitor:
+    def __init__(self):
+        self.memory_threshold = 0.9  # 90% memory usage threshold
+
+    def check_memory_usage(self) -> Dict[str, float]:
+        memory = psutil.virtual_memory()
+        return {
+            "total": memory.total,
+            "available": memory.available,
+            "percent": memory.percent,
+            "threshold_exceeded": memory.percent > (self.memory_threshold * 100)
+        }
+
+class MemoryLimitExceeded(Exception):
+    pass
 
 class MemoryController:
     def __init__(self, config_path="configs/memory_config.json"):
@@ -51,7 +69,7 @@ class MemoryController:
         self.memory_sync = MemorySync()
         self.memory_backup = MemoryBackup()
         self.memory_cleaner = MemoryCleaner()
-        self.memory_validation = validate_memory()
+        self.memory_validation = MemoryValidation()
         self.memory_events = MemoryEvents()
         self.memory_optimization = MemoryOptimization()
         
@@ -67,6 +85,16 @@ class MemoryController:
 
         self.distributed_sync_enabled = True
         self.peer_memory_nodes = set()
+        self.resource_monitor = ResourceMonitor()
+        self._setup_memory_limits()
+        self.validate_config()
+
+    def _setup_memory_limits(self):
+        """Set up memory usage limits and monitoring."""
+        self.memory_limits = {
+            'total': self.config.get('max_memory_usage', 0.8),  # 80% of available RAM
+            'per_component': self.config.get('per_component_limit', 0.2)
+        }
 
     def load_config(self, config_path):
         """Load memory configuration from file"""
@@ -80,9 +108,29 @@ class MemoryController:
             self.logger.error(f"Error decoding configuration file {config_path}!")
             raise
 
+    def validate_config(self):
+        """Validate the loaded configuration."""
+        required_keys = [
+            'learning_algorithm',
+            'self_awareness',
+            'cognitive',
+            'episodic',
+            'semantic',
+            'procedural',
+            'multi_modal',
+            'long_term',
+            'short_term'
+        ]
+        
+        for key in required_keys:
+            if key not in self.config:
+                raise ValueError(f"Missing required config key: {key}")
+
     def store_data(self, memory_type, data, metadata=None):
         """Store data in the appropriate memory type"""
         try:
+            if not self._check_memory_limits(memory_type, data):
+                raise MemoryLimitExceeded(f"Memory limit exceeded for {memory_type}")
             if memory_type == 'semantic':
                 self.semantic_memory.store(data, metadata)
             elif memory_type == 'episodic':
@@ -100,6 +148,8 @@ class MemoryController:
             self.logger.info(f"Data successfully stored in {memory_type} memory.")
         except Exception as e:
             self.logger.error(f"Error storing data: {e}")
+        finally:
+            self._cleanup_resources()
 
     def retrieve_data(self, memory_type, query):
         """Retrieve data from a specific memory type"""
@@ -260,4 +310,20 @@ class MemoryController:
                 self._send_memory_update(peer_node, memory_type, memory_id, update_data)
             except Exception as e:
                 logger.error(f"Failed to sync with peer {peer_node}: {e}")
+
+    def _check_memory_limits(self, memory_type: str, data: Any) -> bool:
+        """Check if storing data would exceed memory limits"""
+        memory_stats = self.resource_monitor.check_memory_usage()
+        if memory_stats["threshold_exceeded"]:
+            self.logger.warning(f"Memory usage critical: {memory_stats['percent']}%")
+            return False
+        return True
+
+    def _cleanup_resources(self):
+        """Clean up temporary resources after memory operations."""
+        try:
+            import gc
+            gc.collect()
+        except Exception as e:
+            self.logger.error(f"Error during resource cleanup: {e}")
 

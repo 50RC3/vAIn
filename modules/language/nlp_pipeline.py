@@ -11,6 +11,17 @@ from .services.result_logging import log_task_result, log_task_failure
 from .services.task_queue import schedule_task
 import os
 from dotenv import load_dotenv
+import torch
+from transformers import (
+    AutoModelForSequenceClassification, 
+    AutoTokenizer,
+    T5ForConditionalGeneration,
+    GPT2LMHeadModel,
+    pipeline
+)
+from langchain.llms import HuggingFacePipeline
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 
 # Load environment variables
 load_dotenv()
@@ -41,22 +52,91 @@ verify_nltk_downloads()
 class NLPPipeline:
     def __init__(self):
         try:
-            self.nlp = spacy.load(SPACY_MODEL)
-        except OSError:
-            logging.error(f"SpaCy model {SPACY_MODEL} not found. Installing...")
-            from spacy.cli import download
-            download(SPACY_MODEL)
-            self.nlp = spacy.load(SPACY_MODEL)
+            # Load models with error handling and device selection
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            logger.info(f"Using device: {device}")
+            
+            self.intent_model = AutoModelForSequenceClassification.from_pretrained(
+                "bert-base-uncased"
+            ).to(device)
+            self.intent_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+            
+            self.t5_model = T5ForConditionalGeneration.from_pretrained(
+                "t5-base"
+            ).to(device)
+            self.t5_tokenizer = AutoTokenizer.from_pretrained("t5-base")
+            
+            self.gpt_model = GPT2LMHeadModel.from_pretrained(
+                "gpt2"
+            ).to(device)
+            self.gpt_tokenizer = AutoTokenizer.from_pretrained("gpt2")
+            
+            try:
+                self.nlp = spacy.load("en_core_web_trf")
+            except OSError:
+                logger.info("Downloading spaCy model...")
+                spacy.cli.download("en_core_web_trf")
+                self.nlp = spacy.load("en_core_web_trf")
+            
+            # Initialize LangChain components
+            self.text_pipeline = pipeline(
+                "text2text-generation",
+                model="t5-base",
+                device=0 if device == "cuda" else -1
+            )
+            self.llm = HuggingFacePipeline(pipeline=self.text_pipeline)
+            
+        except Exception as e:
+            logger.error(f"Error initializing NLP Pipeline: {e}")
+            raise
 
-# --- NLP Pipeline Setup ---
-# Load pre-trained SpaCy NLP model (for NER and Dependency Parsing)
-try:
-    nlp = spacy.load(SPACY_MODEL)
-except OSError:
-    logging.error(f"SpaCy model {SPACY_MODEL} not found. Installing...")
-    from spacy.cli import download
-    download(SPACY_MODEL)
-    nlp = spacy.load(SPACY_MODEL)
+    def analyze_text(self, text: str) -> Dict[str, Any]:
+        """Comprehensive text analysis using multiple models"""
+        try:
+            # Add LangChain analysis
+            chain_result = self.chain.run(text)
+            
+            # SpaCy analysis
+            doc = self.nlp(text)
+            
+            # Intent classification
+            intent_inputs = self.intent_tokenizer(text, return_tensors="pt")
+            intent_outputs = self.intent_model(**intent_inputs)
+            intent_score = torch.nn.functional.softmax(intent_outputs.logits, dim=1)
+            
+            # Semantic analysis using T5
+            t5_inputs = self.t5_tokenizer("summarize: " + text, return_tensors="pt")
+            t5_summary = self.t5_model.generate(**t5_inputs)
+            summary = self.t5_tokenizer.decode(t5_summary[0])
+            
+            return {
+                "entities": [(ent.text, ent.label_) for ent in doc.ents],
+                "intent_score": intent_score.tolist()[0],
+                "summary": summary,
+                "sentiment": doc.sentiment,
+                "key_phrases": [chunk.text for chunk in doc.noun_chunks],
+                "dependencies": [(token.text, token.dep_) for token in doc],
+                "chain_analysis": chain_result,
+            }
+        except Exception as e:
+            logger.error(f"Error in text analysis: {e}")
+            raise
+
+    def generate_response(self, context: str, max_length: int = 100) -> str:
+        """Generate response using GPT-2"""
+        try:
+            inputs = self.gpt_tokenizer(context, return_tensors="pt")
+            outputs = self.gpt_model.generate(
+                **inputs,
+                max_length=max_length,
+                num_return_sequences=1,
+                temperature=0.7,
+                top_p=0.9
+            )
+            return self.gpt_tokenizer.decode(outputs[0])
+        except Exception as e:
+            logger.error(f"Error in response generation: {e}")
+            raise
 
 # --- Preprocessing ---
 def clean_text(text: str) -> str:

@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter
+
+from fastapi import FastAPI, APIRouter, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
@@ -7,6 +8,11 @@ from .config import settings
 from .endpoints import health, agent, environment, agi
 from .dependencies import register_dependencies 
 import logging
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from uuid import uuid4
+import time
 
 # Initialize FastAPI application
 app = FastAPI(
@@ -57,13 +63,30 @@ async def validation_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    logger.error(f"Unexpected error: {exc}")
+    error_id = generate_error_id()
+    logger.exception(f"Error ID {error_id}: Unexpected error occurred")
     return JSONResponse(
         status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal Server Error. Please contact support."},
+        content={
+            "error_id": error_id,
+            "detail": "Internal Server Error. Please contact support with this error ID."
+        },
     )
 
-# Application Startup Event
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request, exc):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Too many requests. Please try again later."}
+    )
+
+def generate_error_id():
+    return f"{int(time.time())}-{str(uuid4())[:8]}"
+
+# Add rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting vAIn API...")
@@ -74,6 +97,11 @@ async def startup_event():
 async def shutdown_event():
     logger.info("Shutting down vAIn API...")
     # Cleanup tasks like closing DB connections, clearing caches, etc.
+
+@limiter.limit("5/minute")
+@api_router.post("/execute")
+async def execute_task(request: Request):
+    # ...existing code...
 
 if __name__ == "__main__":
     import uvicorn

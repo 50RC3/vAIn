@@ -1,0 +1,34 @@
+predictive_scaling:
+  enabled: true
+  forecast_horizon_hours: 24
+  resource_buffer_percent: 20
+  update_interval_minutes: 60
+  min_history_points: 168  # 1 week of hourly data
+  prediction_models:
+    transformer:
+      enabled: true
+      weight: 0.5
+      layers: 4
+      heads: 8
+    lstm:
+      enabled: true
+      weight: 0.5
+      layers: 2
+      units: 128
+
+scaling_thresholds:
+  gpu:
+    scale_up_threshold: 0.8   # Scale up at 80% utilization
+    scale_down_threshold: 0.3 # Scale down at 30% utilization
+    min_instances: 1
+    max_instances: 10
+  memory:
+    scale_up_threshold: 0.75
+    scale_down_threshold: 0.25
+    min_instances: 1
+    max_instances: 8
+  cpu:
+    scale_up_threshold: 0.7
+    scale_down_threshold: 0.2
+    min_instances: 2
+    max_instances: 16

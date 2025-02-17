@@ -6,9 +6,12 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, De
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
 from ..services.task_queue import distribute_task, task_retry, validate_task_parameters
 from ..auth import JWTBearer
 from ..utils import get_node_id, get_peers, register_node, check_peer_health
+from ..services.health_check import SystemHealthMonitor
+from ..services.anomaly_detection import AnomalyDetector
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -22,6 +25,10 @@ router = APIRouter()
 # Encryption key for secure communications
 encryption_key = Fernet.generate_key()
 cipher = Fernet(encryption_key)
+
+# Add new system components
+health_monitor = SystemHealthMonitor()
+anomaly_detector = AnomalyDetector()
 
 # --- P2P Node Models ---
 class P2PNode(BaseModel):
@@ -95,6 +102,41 @@ async def check_peer_health_status(node_id: str):
     except Exception as e:
         logger.error(f"Error checking health of node {node_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to check peer health.")
+
+
+@router.get("/node-health/{node_id}", response_model=Dict[str, Any])
+async def get_node_health(node_id: str):
+    """Get comprehensive health metrics for a node."""
+    try:
+        health_metrics = health_monitor.get_node_health(node_id)
+        anomalies = anomaly_detector.check_node(node_id)
+        
+        return {
+            "node_id": node_id,
+            "health_metrics": health_metrics,
+            "anomalies": anomalies,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Error checking node health: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to check node health")
+
+@router.post("/report-anomaly")
+async def report_anomaly(node_id: str, anomaly_data: Dict[str, Any]):
+    """Report an anomaly in the network."""
+    try:
+        # Verify the reporting node's signature
+        if not verify_node_signature(node_id, anomaly_data):
+            raise HTTPException(status_code=403, detail="Invalid node signature")
+            
+        consensus = await get_anomaly_consensus(anomaly_data)
+        if consensus:
+            await redistribute_workload(node_id)
+        
+        return {"status": "Anomaly reported and handled"}
+    except Exception as e:
+        logger.error(f"Error reporting anomaly: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to process anomaly report")
 
 
 # --- Task Distribution and Management ---

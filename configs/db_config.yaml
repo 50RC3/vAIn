@@ -17,8 +17,8 @@ backup_encryption_key: ${BACKUP_ENCRYPTION_KEY} # Key for encrypting backups
 # Default Database Configuration (Primary Database)
 default:
   db_engine: postgresql                      # Database engine (e.g., PostgreSQL)
-  db_name: vain_db                           # Name of the main database
-  username: ${db_user}                       # Use the environment variable for username
+  db_name: ${DB_NAME:-vain_db}               # Fallback to vain_db if not set
+  username: ${DB_USER:-default_user}         # Fallback value
   password: ${db_password}                   # Use the environment variable for password
   host: localhost                            # Host address where the database is located
   port: 5432                                 # Default PostgreSQL port
@@ -27,6 +27,18 @@ default:
   ssl:
     enabled: true                            # Enable SSL for secure connections
     ca_cert_path: ./configs/ssl/ca.pem       # Path to the SSL certificate authority file
+  pool_settings:
+    max_overflow: 10
+    pool_timeout: 30
+    pool_recycle: 3600
+    echo: false
+    pool_pre_ping: true
+  performance:
+    statement_timeout: 30000  # ms
+    idle_in_transaction_session_timeout: 60000  # ms
+    effective_cache_size: "4GB"
+    maintenance_work_mem: "256MB"
+    random_page_cost: 1.1  # Assuming SSDs
 
 # Replica Configuration (For read-heavy workloads)
 # These replicas handle read requests, distributing the load and improving scalability.
@@ -95,3 +107,12 @@ advanced:
   autocommit: true                           # Enable autocommit for transactions (saves automatically)
   reconnect_attempts: 3                      # Number of retries if a database connection fails
   reconnect_interval: 5                      # Time interval (in seconds) between reconnect attempts
+
+# Add config validation section
+validation:
+  required_env_vars:
+    - DB_PASSWORD
+    - BACKUP_ENCRYPTION_KEY
+  optional_env_vars:
+    - DB_USER
+    - DB_NAME
