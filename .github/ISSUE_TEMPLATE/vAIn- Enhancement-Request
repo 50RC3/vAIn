@@ -1,0 +1,44 @@
+---
+name: Enhancement Request
+about: Request an enhancement or improvement to existing functionality.
+title: "[Enhancement] - Briefly describe the enhancement"
+labels: [enhancement]
+assignees:
+---
+
+## Enhancement Description
+
+Please describe the enhancement you are requesting for an existing feature. Be clear about what functionality you want to improve and how it should be improved.
+
+[**Your enhancement description here**]
+
+## Current Behavior
+
+Describe the current behavior of the feature you want to enhance. What are its limitations or shortcomings?
+
+[**Description of current behavior**]
+
+## Proposed Improvement
+
+Explain in detail how you propose to improve the existing functionality. What should the new behavior be?
+
+[**Your proposed improvement here**]
+
+## Motivation
+
+Why is this enhancement needed? What problems does the current behavior cause? What benefits would the enhancement bring?
+
+[**Your motivation here**]
+
+## Related Federated Learning Techniques (If applicable)
+
+Is this enhancement related to any specific Federated Learning techniques?
+
+- [ ] FedDyn (Federated Learning with Dynamic Regularization)
+- [ ] AMA (Adaptive Mixing Aggregation)
+- [ ] Semi-Synchronous Federated Learning
+- [ ] Inverse Distance Aggregation (IDA) - If implemented
+- [ ] Efficient Communication Protocols - If applicable
+- [ ] General Federated Learning Core Functionality
+
+**Thank you for suggesting this enhancement! We will evaluate its feasibility and impact.**
