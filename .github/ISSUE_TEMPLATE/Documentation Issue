@@ -1,0 +1,45 @@
+---
+name: Documentation Issue
+about: Report a problem with the project's documentation (typo, incorrect information, missing documentation, etc.).
+title: "[Documentation] - Briefly describe the documentation issue"
+labels: [documentation]
+assignees:
+---
+
+## Documentation Issue Description
+
+Please describe the issue you found in the documentation. Be specific about the location of the problem (e.g., file name, section, URL if online documentation).
+
+[**Description of the documentation issue here**]
+
+## Location of Issue
+
+Please specify the location of the documentation issue.
+
+*   **File Name (if applicable):** [e.g., `README.md`, `docs/api.rst`]
+*   **Section/Page Title:** [e.g., "Installation Instructions", "API Reference for FedDyn"]
+*   **URL (if online documentation):** [Link to the specific page]
+
+## Type of Issue
+
+What type of documentation issue is it?
+
+- [ ] Typo or grammatical error
+- [ ] Incorrect information
+- [ ] Missing documentation
+- [ ] Unclear or confusing explanation
+- [ ] Outdated documentation
+- [ ] Broken link
+- [ ] Other (please specify below)
+
+**If "Other", please specify:**
+
+[**Describe "Other" issue here**]
+
+## Suggested Correction (Optional)
+
+If you have a suggestion for how to correct the documentation issue, please provide it here. This is very helpful!
+
+[**Your suggested correction here**]
+
+**Thank you for helping improve our documentation! We will review and address this issue.**
