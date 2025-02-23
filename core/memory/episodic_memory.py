@@ -184,3 +184,4 @@ class EpisodicMemory:
                     self.add_episode(episode["event_data"], episode.get("metadata"), episode.get("system_state"))
                 logger.info(f"Loaded memory from {self.persistent_storage_path}")
             except Exception as e:
+                logger.error(f"Failed to load memory from storage: {e}")

@@ -3,20 +3,22 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-from ..dependencies import get_agi_service, get_current_user
-from ..services.task_queue import enqueue_task, task_retry
-from ..utils import validate_task_parameters
-from ..auth import JWTBearer
+from services.api.dependencies import get_agi_service, get_current_user
+from services.api.task_queue import enqueue_task, task_retry
+from services.utils.utils import validate_task_parameters
+from services.api.auth import JWTBearer
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 import json
+import asyncio
 
 # Set up logging for this file
 logger = logging.getLogger(__name__)
 
 # Initialize rate limiter
-limiter = Limiter()
+limiter = Limiter(key_func=lambda: "default")
+
 
 router = APIRouter()
 
@@ -42,6 +44,11 @@ class AGIErrorResponse(BaseModel):
     detail: str
     code: int
 
+async def get_task_update():
+    # Simulate retrieving a task update
+    await asyncio.sleep(1)  # Simulate delay
+    return {"task_id": "123", "status": "in_progress"}
+
 @router.websocket("/ws/tasks")
 async def websocket_tasks(websocket: WebSocket):
     await websocket.accept()
@@ -52,20 +59,7 @@ async def websocket_tasks(websocket: WebSocket):
             await websocket.send_text(json.dumps({"type": "taskUpdate", "payload": task_update}))
     except WebSocketDisconnect:
         print("Client disconnected")
-        
-# Middleware for logging requests and responses
-@router.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all incoming requests and their response status."""
-    logger.info(f"Request: {request.method} {request.url}")
-    start_time = time.time()
-    
-    response = await call_next(request)
-    
-    process_time = time.time() - start_time
-    logger.info(f"Response status: {response.status_code} - Time taken: {process_time:.4f}s")
-    
-    return response
+
 
 
 # Custom exceptions for better error categorization
@@ -77,7 +71,6 @@ class TaskExecutionError(Exception):
 class ValidationError(Exception):
     def __init__(self, detail: str):
         self.detail = detail
-
 
 # Rate limiting decorator with slowapi
 @limiter.limit("5/minute")
@@ -125,7 +118,6 @@ async def execute_task(request: AGIRequest, background_tasks: BackgroundTasks, a
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
-
 @router.get("/status", response_model=Dict[str, Any])
 async def get_agi_status(agi_service=Depends(get_agi_service)):
     """
@@ -145,7 +137,6 @@ async def get_agi_status(agi_service=Depends(get_agi_service)):
     except Exception as e:
         logger.error(f"Failed to fetch AGI status: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch AGI status: {str(e)}")
-
 
 @router.put("/config", response_model=Dict[str, Any])
 async def update_agi_config(update: AGIConfigUpdate, agi_service=Depends(get_agi_service)):
@@ -169,7 +160,6 @@ async def update_agi_config(update: AGIConfigUpdate, agi_service=Depends(get_agi
         logger.error(f"Failed to update configuration: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update configuration: {str(e)}")
 
-
 @router.websocket("/notifications")
 async def websocket_notifications(websocket: WebSocket, agi_service=Depends(get_agi_service)):
     """
@@ -189,7 +179,6 @@ async def websocket_notifications(websocket: WebSocket, agi_service=Depends(get_
     
     except WebSocketDisconnect:
         logger.info("Client disconnected from WebSocket.")
-    
 
 @router.post("/retry-task")
 async def retry_task(task_id: str, background_tasks: BackgroundTasks, agi_service=Depends(get_agi_service)):

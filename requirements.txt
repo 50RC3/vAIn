@@ -20,9 +20,9 @@ requests>=2.31.0
 matplotlib==3.8.0
 
 # Numpy for numerical operations (useful for performance metrics and calculations)
-numpy==1.24.3
+numpy>=2.0.0
 
-# Celery for asynchronous task queue (optional, if you plan to scale task processing)
+# Celery for asynchronous task queue (optional, if plan to scale task processing)
 celery==5.3.0
 
 # Redis as a message broker for Celery or caching purposes (if using Celery)
@@ -32,7 +32,7 @@ redis==4.4.4
 sqlalchemy==2.0.20
 
 # Databases library for asynchronous database support (if using a database)
-databases==0.7.2
+databases>=0.8.0
 
 # Psycopg2 for PostgreSQL database support (if using PostgreSQL as the DB)
 psycopg2==2.9.7
@@ -84,3 +84,18 @@ jinja2>=3.1.3
 
 # Pillow for image processing (optional, if generating or processing images)
 Pillow>=10.3.0
+
+# Android integration and core functionality dependencies
+aiop2p>=1.0.0
+grpcio>=1.54.0
+grpcio-tools>=1.54.0
+protobuf>=4.23.0
+torch>=2.0.1
+tensorflow>=2.12.0
+pandas>=2.0.2
+scikit-learn>=1.2.2
+python-dotenv>=1.0.0
+aiohttp>=3.8.4
+
+# System monitoring and process utilities
+psutil>=5.9.0

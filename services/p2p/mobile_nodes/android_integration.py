@@ -1,12 +1,13 @@
 import asyncio
 import os
 import json
-from aiop2p import P2PNode
-from grpc_lib import GRPCConnector
-from federated_learning import FederatedLearningClient
-from symbolic_reasoning import SymbolicReasoningModule
-from memory_manager import MemoryManager
-from utils.logger import setup_logger
+from ..aiop2p import P2PNode
+from ..grpc_lib import GRPCConnector
+from ....core import federated_learning
+from ..symbolic_reasoning import SymbolicReasoningModule
+from ....core.federated_learning import FederatedLearningClient
+from ..memory_manager import MemoryManager
+from ..utils.logger import setup_logger
 
 logger = setup_logger("AndroidIntegration")
 
@@ -38,14 +39,14 @@ class AndroidIntegration:
         self.grpc_connector = GRPCConnector(node_id=self.node_id)
         await self.grpc_connector.initialize()
 
-        # Initialize Federated Learning Client
+        # Initialize Memory Manager first as other components might need it
+        self.memory_manager = MemoryManager(node_id=self.node_id)
+        
+        # Initialize Federated Learning Client with memory manager
         self.federated_client = FederatedLearningClient(self.node_id, self.device_info)
         
         # Initialize Symbolic Reasoning Module
         self.symbolic_reasoning = SymbolicReasoningModule(self.node_id)
-
-        # Initialize Memory Manager
-        self.memory_manager = MemoryManager(node_id=self.node_id)
 
         logger.info(f"Android node {self.node_id} initialized successfully.")
 
@@ -86,17 +87,26 @@ class AndroidIntegration:
 
     async def update_memory(self, key: str, value: str):
         """
-        Updates the node's context-aware memory.
+        Updates the node's context-aware memory with enhanced logging.
         """
         logger.info(f"Updating memory for node {self.node_id}: {key} -> {value}")
-        self.memory_manager.store(key, value)
+        success = self.memory_manager.store(key, value)
+        if success:
+            logger.info(f"Successfully updated memory: {key}")
+        else:
+            logger.error(f"Failed to update memory: {key}")
 
     async def fetch_memory(self, key: str):
         """
-        Retrieves information from the node's context-aware memory.
+        Retrieves information from the node's context-aware memory with enhanced logging.
         """
         logger.info(f"Fetching memory for node {self.node_id}: {key}")
-        return self.memory_manager.retrieve(key)
+        value = self.memory_manager.retrieve(key)
+        if value is not None:
+            logger.info(f"Successfully retrieved memory for key: {key}")
+        else:
+            logger.warning(f"No memory found for key: {key}")
+        return value
 
     async def handle_communication(self):
         """
