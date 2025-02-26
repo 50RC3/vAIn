@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { createWebSocketConnection } from '../utils/websocket';
+
 import { NetworkError, APIError, getErrorMessage } from '../utils/errors';
 
 // Add TypeScript types
@@ -32,9 +34,20 @@ const Chatbot = () => {
     setUserInput(event.target.value);
   };
 
-  const sendMessageToChatbot = async (message) => {
+const sendMessageToChatbot = async (message) => {
+    const onMessage = (message) => {
+        // Handle incoming messages from the chatbot
+    };
+
+    const onError = (errorMessage) => {
+        setError(errorMessage);
+    };
+
+    const ws = createWebSocketConnection("ws://localhost:8000/chat", onMessage, onError);
+
     try {
-      const response = await fetch("http://localhost:8000/chat", {
+    const response = await fetch("http://localhost:8000/chat", { 
+
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -159,7 +172,8 @@ const Chatbot = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("http://localhost:8000/rate", {
+    const response = await fetch("http://localhost:8000/rate", { 
+
         method: "POST",
         headers: {
           "Content-Type": "application/json",

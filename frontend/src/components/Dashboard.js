@@ -1,6 +1,5 @@
-// frontend/src/components/Dashboard.js
-
 import React, { useState, useEffect, useCallback } from "react";
+import { createWebSocketConnection } from '../utils/websocket';
 import P2PNetworkStats from "./P2PNetworkStats";
 import Chatbot from "./Chatbot";
 import "../styles/dashboard.css";
@@ -13,50 +12,23 @@ const Dashboard = () => {
   const [retryCount, setRetryCount] = useState(0);
 
   const connectWebSocket = useCallback(() => {
-    try {
-      const ws = new WebSocket("ws://localhost:8000/ws/tasks");
+    const onMessage = (message) => {
+      if (message.type === "taskUpdate") {
+        setTaskUpdates((prevUpdates) => [message.payload, ...prevUpdates].slice(0, 50));
+      }
+    };
 
-      ws.onopen = () => {
-        setIsConnected(true);
-        setIsLoading(false);
-        setError(null);
-        setRetryCount(0);
-      };
+    const onError = (errorMessage) => {
+      setError(errorMessage);
+    };
 
-      ws.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === "taskUpdate") {
-            setTaskUpdates((prevUpdates) => [message.payload, ...prevUpdates].slice(0, 50));
-          }
-        } catch (e) {
-          console.error("Failed to parse WebSocket message:", e);
-        }
-      };
+    const ws = createWebSocketConnection("ws://localhost:8000/ws/tasks", onMessage, onError);
 
-      ws.onclose = () => {
-        setIsConnected(false);
-        if (retryCount < 5) {
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-            connectWebSocket();
-          }, 3000 * Math.pow(2, retryCount));
-        } else {
-          setError("Connection lost. Please refresh the page.");
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        setError("Failed to connect to the server.");
-      };
-
-      return ws;
-    } catch (error) {
-      setError("Failed to establish connection.");
-      setIsLoading(false);
-      return null;
-    }
+    return () => {
+      if (ws) {
+        ws.close();
+      }
+    };
   }, [retryCount]);
 
   useEffect(() => {

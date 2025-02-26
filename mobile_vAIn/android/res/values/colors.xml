@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ...existing colors... -->
+    <color name="bot_avatar_tint">@color/primary</color>
+    <color name="bot_message_background">#F5F5F5</color>
+    <color name="bot_message_text">#212121</color>
+    <color name="timestamp_text">#757575</color>
+    <color name="bot_typing_indicator">@color/primary</color>
+    <color name="user_message_background">@color/primary</color>
+    <color name="user_message_text">@android:color/white</color>
+</resources>

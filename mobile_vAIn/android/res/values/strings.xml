@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="message_hint">Type a message…</string>
+    <string name="send">Send</string>
+    <string name="bot_avatar_description">Bot Avatar</string>
+</resources>

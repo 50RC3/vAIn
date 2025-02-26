@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import './App.css'; // Styling for the frontend
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'; // Note: Switch is now Routes in v6
 import { Header, Footer, Sidebar } from './components/Layout';
 import Home from './pages/Home';
 import Performance from './pages/Performance';
@@ -88,13 +88,13 @@ function App() {
             {loading ? (
               <div className="loading-spinner">Loading...</div>
             ) : (
-              <Switch>
-                <Route path="/" exact component={Home} />
-                <Route path="/performance" component={Performance} />
-                <Route path="/tasks" exact component={Tasks} />
-                <Route path="/tasks/:taskId" component={TaskDetails} />
-                <Route path="/visualization" component={Visualization} />
-              </Switch>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/performance" element={<Performance />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/tasks/:taskId" element={<TaskDetails />} />
+                <Route path="/visualization" element={<Visualization />} />
+              </Routes>
             )}
           </main>
           <Footer />

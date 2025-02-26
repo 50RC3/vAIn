@@ -28,7 +28,7 @@ class MemoryValidation:
 
             # Check the size of the allocated memory block
             allocated_size = len(self.memory_block)
-            if allocated_size == self.memory_size:
+            if allocated_size == self.memory_size and allocated_size > 0:
                 logger.info(f"Memory successfully allocated. Block size: {allocated_size}")
                 return True
             else:
@@ -48,6 +48,9 @@ class MemoryValidation:
 
             # Example: Check if all values in memory block are initialized to 0 (as a simple integrity check)
             for i in range(len(self.memory_block)):
+                if self.memory_block[i] is None:
+                    logger.error(f"Memory integrity issue at index {i}: Value is None")
+                    return False
                 if self.memory_block[i] != 0:
                     logger.error(f"Memory integrity issue at index {i}: Value is {self.memory_block[i]}")
                     return False

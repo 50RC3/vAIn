@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme -->
+    <style name="Theme.MLChatbot" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSecondaryVariant">@color/accent</item>
+        <item name="colorOnSecondary">@android:color/black</item>
+        
+        <!-- Status bar color -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        
+        <!-- Text colors -->
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+    </style>
+
+    <!-- Chat message styles -->
+    <style name="ChatMessage">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:maxWidth">260dp</item>
+    </style>
+
+    <style name="ChatMessage.User">
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:background">@color/user_message_background</item>
+        <item name="android:layout_marginStart">48dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+    </style>
+
+    <style name="ChatMessage.Bot">
+        <item name="android:textColor">@color/bot_message_text</item>
+        <item name="android:background">@color/bot_message_background</item>
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:layout_marginEnd">48dp</item>
+    </style>
+
+    <!-- Input field style -->
+    <style name="ChatInput" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:background">@android:color/white</item>
+        <item name="android:maxLines">4</item>
+    </style>
+
+    <!-- Send button style -->
+    <style name="SendButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minWidth">48dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:padding">12dp</item>
+    </style>
+
+    <!-- Timestamp style -->
+    <style name="TimestampText">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/timestamp_text</item>
+        <item name="android:layout_marginTop">4dp</item>
+    </style>
+
+    <!-- Bot avatar style -->
+    <style name="BotAvatar">
+        <item name="android:layout_width">32dp</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="tint">@color/bot_avatar_tint</item>
+    </style>
+
+    <!-- Loading indicator style -->
+    <style name="LoadingIndicator" parent="Widget.MaterialComponents.CircularProgressIndicator">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="indicatorColor">@color/primary</item>
+    </style>
+
+    <!-- Toolbar style -->
+    <style name="Toolbar" parent="Widget.MaterialComponents.Toolbar.Primary">
+        <item name="android:background">?attr/colorPrimary</item>
+        <item name="android:elevation">4dp</item>
+        <item name="titleTextColor">@android:color/white</item>
+    </style>
+</resources>

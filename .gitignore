@@ -183,3 +183,4 @@ data/nltk_data/
 
 # Model cache
 cache/models/
+node_modules

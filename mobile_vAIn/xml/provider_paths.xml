@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Internal app files directory -->
+    <files-path
+        name="model_files"
+        path="models/" />
+        
+    <!-- Internal app cache directory -->
+    <cache-path
+        name="model_cache"
+        path="model_cache/" />
+        
+    <!-- External files directory -->
+    <external-files-path
+        name="external_model_files"
+        path="MLChatbot/models/" />
+        
+    <!-- External cache directory -->
+    <external-cache-path
+        name="external_model_cache"
+        path="model_cache/" />
+        
+    <!-- Temporary files directory -->
+    <cache-path
+        name="temp_files"
+        path="temp/" />
+</paths>

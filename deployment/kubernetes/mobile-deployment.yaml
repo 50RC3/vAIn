@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-gateway-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mobile-gateway
+  template:
+    metadata:
+      labels:
+        app: mobile-gateway
+    spec:
+      containers:
+      - name: mobile-gateway
+        image: vain/mobile-gateway:latest
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        ports:
+        - containerPort: 8001
+        env:
+        - name: MOBILE_API_PORT
+          value: "8001"
+        - name: MAX_CONNECTIONS
+          value: "1000"
+        volumeMounts:
+        - name: mobile-config
+          mountPath: /app/config
+      volumes:
+      - name: mobile-config
+        configMap:
+          name: mobile-gateway-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mobile-gateway-service
+spec:
+  selector:
+    app: mobile-gateway
+  ports:
+  - port: 8001
+    targetPort: 8001
+  type: LoadBalancer

@@ -25,6 +25,13 @@ class GlobalModelResponse(BaseModel):
 @limiter.limit("10/minute")
 async def receive_model_update(update: ModelUpdate):
     try:
+        # Check if update is from mobile device
+        if update.client_id.startswith("mobile_"):
+            # Apply mobile-specific processing
+            if not validate_mobile_metrics(update.metrics):
+                raise HTTPException(status_code=400, 
+                                 detail="Invalid mobile device metrics")
+        
         # Convert weights to appropriate format and process update
         processed_update = process_model_update(update)
         return {"status": "success", "message": "Update received"}
@@ -48,3 +55,11 @@ def process_model_update(update: ModelUpdate) -> Dict:
 def get_current_global_model() -> Dict:
     # Retrieve current global model state
     pass
+
+def validate_mobile_metrics(metrics: Optional[Dict[str, float]]) -> bool:
+    if not metrics:
+        return False
+    
+    return (metrics.get("battery_level", 0) > 0.2 and
+            metrics.get("available_memory", 0) > 0.3 and
+            metrics.get("network_strength", 0) > 0.4)

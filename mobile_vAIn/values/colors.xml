@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Theme Colors -->
+    <color name="primary">#1976D2</color>
+    <color name="primary_dark">#1565C0</color>
+    <color name="primary_light">#42A5F5</color>
+    <color name="accent">#FF4081</color>
+
+    <!-- Background Colors -->
+    <color name="background">#F5F5F5</color>
+    <color name="surface">#FFFFFF</color>
+    
+    <!-- Message Colors -->
+    <color name="user_message_background">@color/primary</color>
+    <color name="bot_message_background">#FFFFFF</color>
+    <color name="bot_message_text">#212121</color>
+    <color name="timestamp_text">#757575</color>
+    
+    <!-- Bot Avatar -->
+    <color name="bot_avatar_tint">@color/primary</color>
+    <color name="bot_typing_indicator">@color/primary</color>
+
+    <!-- Status Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="error">#F44336</color>
+    <color name="warning">#FFC107</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#BDBDBD</color>
+    
+    <!-- Divider -->
+    <color name="divider">#EEEEEE</color>
+    
+    <!-- Ripple -->
+    <color name="ripple">#1F000000</color>
+</resources>
