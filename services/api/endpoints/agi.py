@@ -1,31 +1,33 @@
-import time
-import logging
-from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks, WebSocket, WebSocketDisconnect
+"""
+AGI API endpoints for task execution, system monitoring and configuration.
+Provides interfaces for AGI interactions and federated learning coordination.
+"""
+
+import asyncio
+import json
+from typing import Dict, Optional, Any
+
+from fastapi import APIRouter, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
-from services.api.dependencies import get_agi_service, get_current_user
-from services.api.task_queue import enqueue_task, task_retry
-from services.utils.utils import validate_task_parameters
-from services.api.auth import JWTBearer
-from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-import json
-import asyncio
 
-# Set up logging for this file
+from services.api.dependencies import get_agi_service
+from services.api.task_queue import enqueue_task, task_retry
+try:
+    from services.utils.validators import validate_task_parameters
+except ImportError:
+    raise ImportError("Module 'services.utils.validators' not found. Ensure it exists and is correctly named.")
+
+# Set up logging and rate limiting
 logger = logging.getLogger(__name__)
-
-# Initialize rate limiter
 limiter = Limiter(key_func=lambda: "default")
-
-
 router = APIRouter()
 
 class AGIRequest(BaseModel):
     """Request schema for interacting with the AGI."""
     task: str
-    parameters: Optional[Dict[str, Any]] = None  # Optional parameters for task execution
+    parameters: Optional[Dict[str, Any]] = None
 
 class AGIResponse(BaseModel):
     """Response schema from the AGI."""
@@ -39,61 +41,48 @@ class AGIConfigUpdate(BaseModel):
     config_key: str
     config_value: Any
 
-class AGIErrorResponse(BaseModel):
-    """Response schema for error handling."""
-    detail: str
-    code: int
-
 async def get_task_update():
-    # Simulate retrieving a task update
-    await asyncio.sleep(1)  # Simulate delay
+    """Retrieve the latest task update."""
+    await asyncio.sleep(1)
     return {"task_id": "123", "status": "in_progress"}
 
 @router.websocket("/ws/tasks")
 async def websocket_tasks(websocket: WebSocket):
+    """Handle WebSocket connections for real-time task updates."""
     await websocket.accept()
     try:
         while True:
-            # Simulate task updates being retrieved
-            task_update = await get_task_update()  # Function to get the latest task update
-            await websocket.send_text(json.dumps({"type": "taskUpdate", "payload": task_update}))
+            task_update = await get_task_update()
+            await websocket.send_text(json.dumps({
+                "type": "taskUpdate",
+                "payload": task_update
+            }))
     except WebSocketDisconnect:
-        print("Client disconnected")
+        logger.info("Client disconnected")
 
-
-
-# Custom exceptions for better error categorization
-class TaskExecutionError(Exception):
-    def __init__(self, task: str, message: str):
-        self.task = task
-        self.message = message
-
-class ValidationError(Exception):
-    def __init__(self, detail: str):
-        self.detail = detail
-
-# Rate limiting decorator with slowapi
 @limiter.limit("5/minute")
-@router.post("/execute", response_model=AGIResponse, responses={429: {"model": AGIErrorResponse}})
-async def execute_task(request: AGIRequest, background_tasks: BackgroundTasks, agi_service=Depends(get_agi_service)):
+@router.post("/execute", response_model=AGIResponse)
+async def execute_task(
+    request: AGIRequest,
+    background_tasks: BackgroundTasks,
+    agi_service=Depends(get_agi_service)
+):
     """
     Execute a task using the AGI system.
-    
-    Parameters:
-    - task: The task to execute (e.g., "generate_plan", "analyze_data").
-    - parameters: Optional parameters for the task.
-    
+
+    Args:
+        request: The task request containing task name and parameters
+        background_tasks: FastAPI background tasks handler
+        agi_service: AGI service instance
+
     Returns:
-    - AGIResponse: Result of the task execution.
+        AGIResponse: Result of the task execution
     """
     try:
-        # Validate parameters before processing
         validate_task_parameters(request.task, request.parameters)
         
-        # Enqueue the task for background processing (asynchronous)
+        logger.info("Task %s started", request.task)
         background_tasks.add_task(enqueue_task, request.task, request.parameters, agi_service)
-        
-        logger.info(f"Task {request.task} started.")
         
         return AGIResponse(
             task=request.task,
@@ -102,101 +91,88 @@ async def execute_task(request: AGIRequest, background_tasks: BackgroundTasks, a
             message="Task is being processed in the background."
         )
     
-    except RateLimitExceeded:
-        logger.error("Rate limit exceeded for task execution.")
-        raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
+    except RateLimitExceeded as exc:
+        logger.error("Rate limit exceeded for task execution")
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests. Please try again later."
+        ) from exc
     
     except ValidationError as e:
-        logger.error(f"Validation error: {e.detail}")
-        raise HTTPException(status_code=400, detail=f"Validation failed: {e.detail}")
+        logger.error("Validation error: %s", e.detail)
+        raise HTTPException(
+            status_code=400,
+            detail="Validation failed: %s" % e.detail
+        ) from e
     
     except TaskExecutionError as e:
-        logger.error(f"Task execution failed for {e.task}: {e.message}")
-        raise HTTPException(status_code=500, detail=f"Task execution failed: {e.message}")
+        logger.error("Task execution failed for %s: %s", e.task, e.message)
+        raise HTTPException(
+            status_code=500,
+            detail="Task execution failed: %s" % e.message
+        ) from e
     
     except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        logger.error("Unexpected error: %s", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Unexpected error: %s" % str(e)
+        ) from e
 
-@router.get("/status", response_model=Dict[str, Any])
+@router.get("/status")
 async def get_agi_status(agi_service=Depends(get_agi_service)):
-    """
-    Fetch the current status of the AGI system.
-    
-    Returns:
-    - Status: Current status and metrics of the AGI.
-    """
+    """Get current AGI system status."""
     try:
         status = agi_service.get_cached_status()
         if not status:
             status = agi_service.get_status()
-            agi_service.cache_status(status)  # Cache the status to optimize future requests
-        
+            agi_service.cache_status(status)
         return status
     
     except Exception as e:
-        logger.error(f"Failed to fetch AGI status: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch AGI status: {str(e)}")
+        logger.error("Failed to fetch AGI status: %s", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch AGI status: %s" % str(e)
+        ) from e
 
-@router.put("/config", response_model=Dict[str, Any])
+@router.put("/config")
 async def update_agi_config(update: AGIConfigUpdate, agi_service=Depends(get_agi_service)):
-    """
-    Update the configuration of the AGI system dynamically.
-    
-    Parameters:
-    - config_key: Key of the configuration to update.
-    - config_value: New value for the configuration.
-    
-    Returns:
-    - Updated configuration.
-    """
+    """Update AGI system configuration."""
     try:
         updated_config = agi_service.update_config(update.config_key, update.config_value)
         return {"success": True, "updated_config": updated_config}
-    except KeyError:
-        logger.error(f"Configuration key not found: {update.config_key}")
-        raise HTTPException(status_code=404, detail="Configuration key not found.")
+    
+    except KeyError as exc:
+        logger.error("Configuration key not found: %s", update.config_key)
+        raise HTTPException(
+            status_code=404,
+            detail="Configuration key not found."
+        ) from exc
+    
     except Exception as e:
-        logger.error(f"Failed to update configuration: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to update configuration: {str(e)}")
-
-@router.websocket("/notifications")
-async def websocket_notifications(websocket: WebSocket, agi_service=Depends(get_agi_service)):
-    """
-    WebSocket for real-time task notifications.
-    
-    This allows clients to receive updates on task progress or completion in real time.
-    """
-    await websocket.accept()
-    
-    try:
-        while True:
-            # Check for updates or task status
-            task_updates = agi_service.get_task_updates()
-            await websocket.send_text(task_updates)
-            
-            await asyncio.sleep(5)  # Update every 5 seconds
-    
-    except WebSocketDisconnect:
-        logger.info("Client disconnected from WebSocket.")
+        logger.error("Failed to update configuration: %s", str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update configuration: %s" % str(e)
+        ) from e
 
 @router.post("/retry-task")
-async def retry_task(task_id: str, background_tasks: BackgroundTasks, agi_service=Depends(get_agi_service)):
+async def retry_task(task_id: str, agi_service=Depends(get_agi_service)):
     """
-    Retry a failed task using an exponential backoff strategy.
+    Retry a failed task.
     
-    Parameters:
-    - task_id: The ID of the task to retry.
-    
-    Returns:
-    - Success message or error.
+    Args:
+        task_id: ID of the task to retry
+        agi_service: AGI service instance
     """
     try:
-        # Retry task with exponential backoff
-        result = await task_retry(task_id, agi_service)
-        
-        return {"success": True, "message": f"Task {task_id} retried successfully."}
+        await task_retry(task_id, agi_service)
+        return {"success": True, "message": "Task %s retried successfully" % task_id}
     
     except Exception as e:
-        logger.error(f"Task retry failed for {task_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Task retry failed: {str(e)}")
+        logger.error("Task retry failed for %s: %s", task_id, str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Task retry failed: %s" % str(e)
+        ) from e

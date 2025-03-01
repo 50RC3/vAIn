@@ -3,5 +3,10 @@
         "tests"
     ],
     "python.testing.unittestEnabled": true,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "dbcode.connections": [],
+    "python.defaultInterpreterPath": "${workspaceFolder}/vAInenv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.envFile": "${workspaceFolder}/.env",
+    "inlineChat.lineEmptyHint": true
 }

@@ -1,1 +1,3 @@
-"""Services package containing API, database, P2P, and utility modules."""
+"""Services package for vAIn platform."""
+
+# Empty file to mark directory as Python package

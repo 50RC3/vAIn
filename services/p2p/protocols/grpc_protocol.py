@@ -1,188 +1,183 @@
-import logging
-import grpc
-import json
-from concurrent import futures
-from cryptography.fernet import Fernet
-from typing import List, Dict
-from fastapi import HTTPException
-from .services.result_logging import log_task_result, log_task_failure
-from .services.task_queue import distribute_task, validate_task_parameters
-from .services.node_management import register_node, get_peers
-from .proto import grpc_messages_pb2, grpc_messages_pb2_grpc
+"""
+gRPC protocol implementation for P2P communication in vAIn.
+Handles node registration, peer discovery, and task distribution.
+"""
 
-# Set up logging
+import concurrent.futures
+import json
+from typing import Dict, Any, Optional
+import logging
+
+import grpc
+from cryptography.fernet import Fernet
+from fastapi import HTTPException
+
+from vain.services.result_logging import ResultLogger
+from vain.services.task_queue import TaskQueue
+from vain.services.node_management import NodeManager
+from vain.services.p2p.proto import p2p_pb2, p2p_pb2_grpc
+
 logger = logging.getLogger(__name__)
 
-# Encryption setup for secure communication
-encryption_key = Fernet.generate_key()
-cipher = Fernet(encryption_key)
+class P2PServicer(p2p_pb2_grpc.P2PServiceServicer):
+    """gRPC servicer implementation for P2P communication."""
 
-# --- GRPC Server ---
-class NodeService(grpc_messages_pb2_grpc.NodeServiceServicer):
-    """
-    GRPC service for handling node requests, task distribution, and result logging.
-    """
-    
-    async def TaskRequest(self, request, context):
-        """
-        Handles incoming task requests from peers or clients.
-        """
+    def __init__(self, node_manager: NodeManager, task_queue: TaskQueue, result_logger: ResultLogger):
+        self.node_manager = node_manager
+        self.task_queue = task_queue
+        self.result_logger = result_logger
+        self.fernet = Fernet(Fernet.generate_key())
+
+    def task_request(self, request, context) -> p2p_pb2.TaskResponse:
+        """Handle incoming task requests."""
         try:
-            # Decrypt and process the task request
-            decrypted_request = cipher.decrypt(request.encrypted_task_data).decode()
-            task_data = json.loads(decrypted_request)
+            task_id = request.task_id
+            request_data = json.loads(request.task_data)
             
-            # Validate task parameters
-            if not validate_task_parameters(task_data):
-                log_task_failure(task_data["task_name"], task_data["target_node_id"], "Invalid parameters.")
-                return grpc_messages_pb2.TaskResponse(success=False, message="Invalid task parameters")
+            if not self.validate_task_data(request_data):
+                return p2p_pb2.TaskResponse(
+                    success=False,
+                    message="Invalid task data format"
+                )
             
-            # Distribute the task (this could be to a local service or peer)
-            task_response = await distribute_task(task_data)
+            processed_data = self.task_queue.process_task(task_id, request_data)
+            encrypted_result = self.fernet.encrypt(json.dumps(processed_data).encode())
             
-            # Log the result of the task execution
-            log_task_result(task_data["task_name"], task_response["success"], task_response["message"])
-            
-            # Encrypt the task result before sending back to the peer
-            encrypted_response = cipher.encrypt(json.dumps(task_response).encode())
-            return grpc_messages_pb2.TaskResponse(
-                success=task_response["success"],
-                message=task_response["message"],
-                encrypted_task_result=encrypted_response
-            )
-        
-        except Exception as e:
-            logger.error(f"Error handling TaskRequest: {str(e)}")
-            return grpc_messages_pb2.TaskResponse(success=False, message=f"Error: {str(e)}")
-    
-    async def RegisterNode(self, request, context):
-        """
-        Registers a new node in the network.
-        """
-        try:
-            # Register the node using the provided details
-            node_id = request.node_id
-            node_ip = request.node_ip
-            node_port = request.node_port
-            
-            # Register node in the system (this could be a database or distributed registry)
-            register_node(node_id, node_ip, node_port)
-            logger.info(f"Node {node_id} registered successfully.")
-            
-            return grpc_messages_pb2.RegisterNodeResponse(
+            return p2p_pb2.TaskResponse(
                 success=True,
-                message=f"Node {node_id} registered successfully."
+                result=encrypted_result,
+                message="Task processed successfully"
             )
-        
+            
         except Exception as e:
-            logger.error(f"Error registering node {request.node_id}: {str(e)}")
-            return grpc_messages_pb2.RegisterNodeResponse(success=False, message=f"Error: {str(e)}")
-    
-    async def PeerDiscovery(self, request, context):
-        """
-        Returns a list of peers registered in the network.
-        """
+            logger.error("Task request failed: %s", str(e))
+            return p2p_pb2.TaskResponse(
+                success=False,
+                message="Error processing task: %s" % str(e)
+            )
+
+    def register_node(self, request, context) -> p2p_pb2.RegistrationResponse:
+        """Handle node registration requests."""
         try:
-            peers = get_peers()
-            peer_list = []
-            for peer in peers:
-                peer_list.append(grpc_messages_pb2.PeerInfo(node_id=peer["node_id"], node_ip=peer["node_ip"], node_port=peer["node_port"]))
+            node_info = {
+                'id': request.node_id,
+                'address': request.address,
+                'capabilities': json.loads(request.capabilities)
+            }
             
-            return grpc_messages_pb2.PeerDiscoveryResponse(peers=peer_list)
-        
+            success = self.node_manager.register_node(node_info)
+            
+            if success:
+                logger.info("Node registered successfully: %s", request.node_id)
+                return p2p_pb2.RegistrationResponse(
+                    success=True,
+                    message="Node registered successfully"
+                )
+            
+            return p2p_pb2.RegistrationResponse(
+                success=False,
+                message="Node registration failed"
+            )
+            
         except Exception as e:
-            logger.error(f"Error discovering peers: {str(e)}")
-            return grpc_messages_pb2.PeerDiscoveryResponse(peers=[])
+            logger.error("Node registration failed: %s", str(e))
+            return p2p_pb2.RegistrationResponse(
+                success=False,
+                message=str(e)
+            )
 
-# --- GRPC Client ---
-class NodeClient:
-    """
-    Client to interact with the GRPC server. Can send task requests, register nodes, and discover peers.
-    """
-    
-    def __init__(self, node_id: str, node_ip: str, node_port: int):
-        self.node_id = node_id
-        self.node_ip = node_ip
-        self.node_port = node_port
-        self.channel = grpc.insecure_channel(f"{node_ip}:{node_port}")
-        self.stub = grpc_messages_pb2_grpc.NodeServiceStub(self.channel)
-    
-    def send_task_request(self, task_data: Dict) -> Dict:
-        """
-        Sends a task request to the GRPC server and waits for a response.
-        """
+    def peer_discovery(self, request, context) -> p2p_pb2.PeerDiscoveryResponse:
+        """Handle peer discovery requests."""
         try:
-            # Encrypt the task data before sending
-            encrypted_data = cipher.encrypt(json.dumps(task_data).encode())
-            request = grpc_messages_pb2.TaskRequest(
-                encrypted_task_data=encrypted_data
+            node_id = request.node_id
+            capabilities_filter = (json.loads(request.capabilities_filter) 
+                                if request.capabilities_filter else None)
+            
+            peers = self.node_manager.get_peers(node_id, capabilities_filter)
+            peer_list = [
+                p2p_pb2.PeerInfo(
+                    node_id=peer['id'],
+                    address=peer['address'],
+                    capabilities=json.dumps(peer['capabilities'])
+                ) for peer in peers
+            ]
+            
+            return p2p_pb2.PeerDiscoveryResponse(
+                success=True,
+                peers=peer_list
             )
             
-            # Send the request and get the response
-            response = self.stub.TaskRequest(request)
-            
-            # Decrypt and process the response
-            decrypted_response = cipher.decrypt(response.encrypted_task_result).decode()
-            return json.loads(decrypted_response)
-        
-        except grpc.RpcError as e:
-            logger.error(f"RPC error occurred: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error occurred while sending task request.")
-    
-    def register_node(self) -> Dict:
-        """
-        Registers the current node with the GRPC server.
-        """
-        try:
-            request = grpc_messages_pb2.RegisterNodeRequest(
-                node_id=self.node_id,
-                node_ip=self.node_ip,
-                node_port=self.node_port
+        except Exception as e:
+            logger.error("Peer discovery failed: %s", str(e))
+            return p2p_pb2.PeerDiscoveryResponse(
+                success=False,
+                peers=[],
+                message=str(e)
             )
-            response = self.stub.RegisterNode(request)
-            return {"success": response.success, "message": response.message}
-        
-        except grpc.RpcError as e:
-            logger.error(f"RPC error occurred during node registration: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error occurred during node registration.")
-    
-    def discover_peers(self) -> List[Dict]:
-        """
-        Discovers peers from the GRPC server.
-        """
+
+    def send_task_request(self, node_address: str, task_id: str, task_data: Dict[str, Any]) -> bool:
+        """Send task request to a specific node."""
         try:
-            request = grpc_messages_pb2.PeerDiscoveryRequest()
-            response = self.stub.PeerDiscovery(request)
-            peers = [{"node_id": peer.node_id, "node_ip": peer.node_ip, "node_port": peer.node_port} for peer in response.peers]
-            return peers
-        
-        except grpc.RpcError as e:
-            logger.error(f"RPC error occurred during peer discovery: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error occurred during peer discovery.")
+            logger.info("Sending task request to %s", node_address)
+            channel = grpc.insecure_channel(node_address)
+            stub = p2p_pb2_grpc.P2PServiceStub(channel)
+            
+            response = stub.task_request(p2p_pb2.TaskRequest(
+                task_id=task_id,
+                task_data=json.dumps(task_data)
+            ))
+            
+            if response.success:
+                logger.info("Task request sent successfully")
+                return True
+            
+            logger.error("Task request failed: %s", response.message)
+            raise grpc.RpcError(response.message)
+            
+        except Exception as e:
+            logger.error("Error sending task request: %s", str(e))
+            raise HTTPException(
+                status_code=500, 
+                detail="Error occurred while sending task request."
+            ) from e
 
-# --- GRPC Server Setup ---
-def start_grpc_server(host: str, port: int):
-    """
-    Start the GRPC server for handling incoming requests.
-    """
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    grpc_messages_pb2_grpc.add_NodeServiceServicer_to_server(NodeService(), server)
-    server.add_insecure_port(f"{host}:{port}")
-    server.start()
-    logger.info(f"GRPC server started on {host}:{port}")
-    server.wait_for_termination()
+    def register_with_peer(self, peer_address: str, node_info: Dict[str, Any]) -> bool:
+        """Register this node with a peer node."""
+        try:
+            logger.info("Registering with peer at %s", peer_address)
+            channel = grpc.insecure_channel(peer_address)
+            stub = p2p_pb2_grpc.P2PServiceStub(channel)
+            
+            response = stub.register_node(p2p_pb2.RegistrationRequest(
+                node_id=node_info['id'],
+                address=node_info['address'],
+                capabilities=json.dumps(node_info['capabilities'])
+            ))
+            
+            if response.success:
+                logger.info("Registration with peer successful")
+                return True
+            
+            logger.error("Registration with peer failed: %s", response.message)
+            raise grpc.RpcError(response.message)
+            
+        except Exception as e:
+            logger.error("Error during peer registration: %s", str(e))
+            raise HTTPException(
+                status_code=500,
+                detail="Error occurred during node registration."
+            ) from e
 
-# --- Example Usage ---
-if __name__ == "__main__":
-    # Start the server (this would typically be done in a separate process or container)
-    start_grpc_server("localhost", 50051)
+    def validate_task_data(self, task_data: Dict[str, Any]) -> bool:
+        """Validate incoming task data structure."""
+        required_fields = ['type', 'payload']
+        return all(field in task_data for field in required_fields)
 
-    # Example client usage:
-    client = NodeClient(node_id="node1", node_ip="localhost", node_port=50051)
-    task_data = {
-        "task_name": "data_processing",
-        "parameters": {"input_data": "some_data"},
-        "target_node_id": "node2"
-    }
-    result = client.send_task_request(task_data)
-    logger.info(f"Task result: {result}")
+    def start_server(self, address: str) -> grpc.Server:
+        """Start the gRPC server."""
+        server = grpc.server(concurrent.futures.ThreadPoolExecutor(max_workers=10))
+        p2p_pb2_grpc.add_P2PServiceServicer_to_server(self, server)
+        server.add_insecure_port(address)
+        server.start()
+        logger.info("gRPC server started on %s", address)
+        return server

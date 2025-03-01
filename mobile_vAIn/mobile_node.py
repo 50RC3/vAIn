@@ -1,79 +1,89 @@
-import torch
-import numpy as np
-from typing import Dict, Any, Optional
+"""
+Mobile node implementation for vAIn platform.
+
+This module provides functionality for mobile device integration with the vAIn
+platform, including device metrics collection, model updates, and resource monitoring.
+"""
+
+import asyncio
 import logging
 from dataclasses import dataclass
-import psutil
-import asyncio
+from typing import Dict, Optional
+
+try:
+    import psutil
+    import wmi
+    import pythoncom
+except ImportError as e:
+    raise ImportError(
+        "Required packages not found. Please run: "
+        "pip install psutil wmi pythoncom"
+    ) from e
 
 @dataclass
-class MobileDeviceMetrics:
-    battery_level: float
-    available_memory: int
+class DeviceMetrics:
+    """
+    Data class for storing device performance metrics.
+    
+    Attributes:
+        cpu_usage: CPU utilization percentage
+        memory_usage: Memory usage in percentage
+        battery_level: Battery level percentage if available
+        temperature: Device temperature in Celsius if available
+    """
     cpu_usage: float
-    network_strength: float
-    storage_available: int
+    memory_usage: float
+    battery_level: Optional[float] = None
+    temperature: Optional[float] = None
 
 class MobileNode:
-    def __init__(self, device_id: str, min_battery_level: float = 0.2):
+    """
+    Represents a mobile device node in the vAIn network.
+    
+    Handles device monitoring, resource management, and communication
+    with the main vAIn network for distributed learning tasks.
+    """
+    
+    def __init__(self, device_id: str):
         self.device_id = device_id
-        self.min_battery_level = min_battery_level
-        self.local_model = None
         self.logger = logging.getLogger(__name__)
-        
-    async def get_device_metrics(self) -> MobileDeviceMetrics:
-        """Get current device metrics"""
-        return MobileDeviceMetrics(
-            battery_level=self._get_battery_level(),
-            available_memory=psutil.virtual_memory().available,
-            cpu_usage=psutil.cpu_percent(),
-            network_strength=self._get_network_strength(),
-            storage_available=psutil.disk_usage('/').free
-        )
+        self._wmi = None
+        self._setup_monitoring()
 
-    def can_participate(self, metrics: Optional[MobileDeviceMetrics] = None) -> bool:
-        """Check if device can participate in federated learning"""
-        if metrics is None:
-            metrics = asyncio.run(self.get_device_metrics())
-        
-        return (metrics.battery_level > self.min_battery_level and
-                metrics.available_memory > 500_000_000 and  # 500MB
-                metrics.cpu_usage < 80)
-
-    async def train_local_model(self, data: Any, epochs: int = 1) -> Dict[str, Any]:
-        """Train local model with device data"""
-        if not self.can_participate():
-            return None
-            
+    def _setup_monitoring(self) -> None:
+        """Initialize system monitoring components."""
         try:
-            metrics = await self.get_device_metrics()
-            results = await self._perform_training(data, epochs)
-            return {
-                "device_id": self.device_id,
-                "model_updates": results,
-                "metrics": metrics.__dict__
-            }
-        except Exception as e:
-            self.logger.error(f"Training failed: {str(e)}")
-            return None
+            pythoncom.CoInitialize()
+            self._wmi = wmi.WMI()
+            self.logger.info("Device monitoring initialized for %s", self.device_id)
+        except Exception as exc:
+            self.logger.error("Failed to initialize monitoring: %s", str(exc))
+            raise RuntimeError("Device monitoring setup failed") from exc
 
-    def receive_global_model(self, model_weights: Dict[str, Any]):
-        """Update local model with global weights"""
+    async def collect_metrics(self) -> DeviceMetrics:
+        """Collect current device performance metrics."""
         try:
-            self.local_model.load_state_dict(model_weights)
-            return True
-        except Exception as e:
-            self.logger.error(f"Failed to update local model: {str(e)}")
-            return False
+            metrics = DeviceMetrics(
+                cpu_usage=psutil.cpu_percent(),
+                memory_usage=psutil.virtual_memory().percent
+            )
+            self.logger.debug("Metrics collected for %s", self.device_id)
+            return metrics
+        except Exception as exc:
+            self.logger.error("Failed to collect metrics: %s", str(exc))
+            raise RuntimeError("Metrics collection failed") from exc
 
-    def _get_battery_level(self) -> float:
-        """Get device battery level - implement platform specific logic"""
-        return 1.0  # Mock implementation
+    async def update_status(self) -> Dict[str, float]:
+        """Update and return current device status."""
+        metrics = await self.collect_metrics()
+        return {
+            "cpu_usage": metrics.cpu_usage,
+            "memory_usage": metrics.memory_usage,
+            "battery_level": metrics.battery_level or 0.0,
+            "temperature": metrics.temperature or 0.0
+        }
 
-    def _get_network_strength(self) -> float:
-        """Get network signal strength - implement platform specific logic"""
-        return 1.0  # Mock implementation
-
-    async def _perform_training(self, data: Any, epochs: int) -> Dict[str, Any]:
-        """Perform actual model training - implement specific training logic"""
-        pass  # Implement actual training logic
+    def cleanup(self) -> None:
+        """Release system resources."""
+        if self._wmi:
+            pythoncom.CoUninitialize()

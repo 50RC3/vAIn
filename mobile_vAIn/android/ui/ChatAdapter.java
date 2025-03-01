@@ -1,57 +1,59 @@
+package com.vain.android.ui;
 
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.ArrayList;
+import java.util.List;
 
+public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHolder> {
+    private List<ChatMessage> messages;
 
+    public ChatAdapter() {
+        this.messages = new ArrayList<>();
+    }
 
+    @NonNull
+    @Override
+    public MessageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_message, parent, false);
+        return new MessageViewHolder(view);
+    }
 
+    @Override
+    public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
+        ChatMessage message = messages.get(position);
+        holder.messageText.setText(message.getText());
+        holder.timestampText.setText(message.getTimestamp());
+    }
 
+    @Override
+    public int getItemCount() {
+        return messages.size();
+    }
 
+    public void addMessage(ChatMessage message) {
+        messages.add(message);
+        notifyItemInserted(messages.size() - 1);
+    }
 
+    public void setMessages(List<ChatMessage> messages) {
+        this.messages = messages;
+        notifyDataSetChanged();
+    }
 
+    static class MessageViewHolder extends RecyclerView.ViewHolder {
+        TextView messageText;
+        TextView timestampText;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}    }        }            messageTextView.setText(message.getText());        public void bind(MessageItem message) {        }            messageTextView = itemView.findViewById(R.id.message_text);            super(itemView);        public MessageViewHolder(@NonNull View itemView) {        private final TextView messageTextView;    static class MessageViewHolder extends RecyclerView.ViewHolder {    }        return messageList.size();    public int getItemCount() {    @Override    }        holder.bind(message);        MessageItem message = messageList.get(position);    public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {    @Override    }        return new MessageViewHolder(view);        View view = inflater.inflate(R.layout.item_message, parent, false);    public MessageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {    @Override    @NonNull    }        this.inflater = LayoutInflater.from(context);        this.messageList = messageList;    public ChatAdapter(Context context, List<MessageItem> messageList) {    private final LayoutInflater inflater;    private final List<MessageItem> messageList;public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHolder> {import java.util.List;import com.mlchatbot.R;import androidx.recyclerview.widget.RecyclerView;import androidx.annotation.NonNull;import android.widget.TextView;import android.view.ViewGroup;import android.view.View;import android.view.LayoutInflater;import android.content.Context;package com.mlchatbot.ui;public class ChatAdapter {
-    
+        MessageViewHolder(@NonNull View itemView) {
+            super(itemView);
+            messageText = itemView.findViewById(R.id.messageText);
+            timestampText = itemView.findViewById(R.id.timestampText);
+        }
+    }
 }

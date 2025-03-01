@@ -3,8 +3,8 @@ import sys
 import logging
 import logging.config
 from pathlib import Path
-from python_json_logger import jsonlogger  # Fixed import statement
-from dotenv import load_dotenv  # This will work after installing python-dotenv
+from pythonjsonlogger import jsonlogger
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
@@ -17,12 +17,18 @@ try:
     # Create subdirectories for different components
     (log_dir / "ai_events").mkdir(exist_ok=True)
     (log_dir / "p2p").mkdir(exist_ok=True)
-    (log_dir / "system").mkdir(exist_ok=True)
+    (log_dir / "system").mkdir(existOk=True)
 except Exception as e:
     print(f"Error creating log directories: {e}", file=sys.stderr)
     sys.exit(1)
 
-class AIEventFormatter(jsonlogger.JsonFormatter):  # Updated class reference
+class AIEventFormatter(jsonlogger.JsonFormatter):
+    """
+    Custom JSON formatter for AI events logging.
+    
+    Extends the base JsonFormatter to include AI-specific fields
+    such as ai_component and event_type in the log records.
+    """
     def add_fields(self, log_record, record, message_dict):
         super().add_fields(log_record, record, message_dict)
         log_record['ai_component'] = getattr(record, 'ai_component', 'unknown')
@@ -37,7 +43,7 @@ LOGGING_CONFIG = {
             "fmt": "%(asctime)s %(name)s %(levelname)s %(message)s %(ai_component)s %(event_type)s"
         },
         "p2p_json": {
-            "()": jsonlogger.JsonFormatter,  # Updated class reference
+            "()": jsonlogger.JsonFormatter,
             "fmt": "%(asctime)s %(name)s %(levelname)s %(message)s %(peer_id)s %(network_status)s"
         },
         "standard": {

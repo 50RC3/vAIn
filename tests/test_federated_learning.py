@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from core.federated_learning import FederatedLearning
-import tensorflow as tf
+import torch
 
 class DummyModel:
     def __init__(self, client_id):

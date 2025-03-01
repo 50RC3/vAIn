@@ -1,1 +1,1 @@
-"""Core package containing the main AI and learning components."""
+"""Core package for vAIn platform."""

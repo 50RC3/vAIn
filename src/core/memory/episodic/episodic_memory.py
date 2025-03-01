@@ -1,31 +1,61 @@
+"""
+Episodic Memory Module for vAIn Core.
+
+This module implements episodic memory capabilities for storing and retrieving
+temporal sequences of experiences and events.
+"""
+
 from typing import Dict, Any, Optional
-from ..base import MemoryInterface
-from ..utils.optimizer import MemoryOptimizer
+from datetime import datetime
+from ..storage import MemoryStorage
+from core.memory.exceptions import MemoryStorageError
 
-class EpisodicMemory(MemoryInterface):
+class EpisodicMemory:
+    """
+    Manages episodic memory storage and retrieval.
+    
+    Provides functionality for storing, retrieving, and managing temporal sequences
+    of experiences and events in a structured memory system.
+    """
+    
     def __init__(self):
-        self.logger = self._setup_logger()
-        self.storage = {}
-        self.optimizer = MemoryOptimizer()
+        """Initialize episodic memory with storage backend."""
+        self.storage = MemoryStorage()
+        self.episodes: Dict[str, Any] = {}
 
-    def store(self, data: Dict[str, Any]) -> bool:
+    async def store(self, episode_id: str, data: Any) -> bool:
+        """
+        Store a new episode in memory.
+        
+        Args:
+            episode_id: Unique identifier for the episode
+            data: Episode data to store
+            
+        Returns:
+            bool: True if storage was successful, False otherwise
+        
+        Raises:
+            MemoryStorageError: If storage operation fails
+        """
         try:
-            self._validate_memory(data)
-            optimized_data = self.optimizer.optimize(data)
-            return self._persist_memory(optimized_data)
+            self.episodes[episode_id] = {
+                'data': data,
+                'timestamp': datetime.now()
+            }
+            return True
+        except MemoryStorageError as e:
+            raise e
         except Exception as e:
-            self.logger.error(f"Storage failed: {e}")
-            return False
+            raise MemoryStorageError(f"Failed to store episode: {str(e)}") from e
 
-    def retrieve(self, query: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        try:
-            return self.storage.get(self._generate_key(query))
-        except Exception as e:
-            self.logger.error(f"Retrieval failed: {e}")
-            return None
-
-    def optimize(self) -> None:
-        self.storage = {k: self.optimizer.optimize(v) for k, v in self.storage.items()}
-
-    def _generate_key(self, query: Dict[str, Any]) -> str:
-        return str(hash(frozenset(query.items())))
+    async def retrieve(self, episode_id: str) -> Optional[Any]:
+        """
+        Retrieve an episode from memory.
+        
+        Args:
+            episode_id: ID of the episode to retrieve
+            
+        Returns:
+            Optional[Any]: Episode data if found, None otherwise
+        """
+        return self.episodes.get(episode_id, {}).get('data')

@@ -1,8 +1,16 @@
-from typing import Dict, Any, Optional
-from pydantic import ValidationError
-import ipaddress
+"""
+Validation utilities for vAIn platform.
 
-def validate_task_parameters(parameters: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+This module provides validation functions for various platform components
+including task parameters, network configurations, and node identifiers.
+"""
+
+import ipaddress
+from typing import Dict, Any, Optional, Tuple
+
+from pydantic import ValidationError
+
+def validate_task_parameters(task_name: str, parameters: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
     """
     Validate task parameters.
     Returns (is_valid, error_message)
@@ -11,14 +19,13 @@ def validate_task_parameters(parameters: Dict[str, Any]) -> tuple[bool, Optional
         if not isinstance(parameters, dict):
             return False, "Parameters must be a dictionary"
         
-        # Check for required fields
+        # Check for required fields based on task type
         required_fields = ["task_type", "input_data"]
         missing = [field for field in required_fields if field not in parameters]
         if missing:
             return False, f"Missing required fields: {', '.join(missing)}"
-            
         return True, None
-    except Exception as e:
+    except (ValueError, TypeError, ValidationError) as e:
         return False, str(e)
 
 def validate_ip_address(ip: str) -> bool:

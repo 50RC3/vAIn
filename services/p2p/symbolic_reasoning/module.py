@@ -18,7 +18,7 @@ class SymbolicReasoningModule:
                 "result": "Placeholder response"
             }
             return result
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             self.logger.error(f"Error processing query: {e}")
             return {
                 "status": "error",

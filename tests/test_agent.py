@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from core.reinforcement_learning.agent import RLAgent
-import tensorflow as tf
+import torch
 
 def test_agent_initialization():
     with pytest.raises(ValueError):

@@ -2,41 +2,56 @@
 
 ```
 vAIn/
+├── app/
+│   └── mobile_vain/
+│       └── mobile_node.py
 ├── docs/
-│   ├── api_reference.md       # Comprehensive API documentation
-│   ├── api_updates.md         # Planned API changes and extensions
-│   ├── architecture.md        # System architecture and components
-│   ├── developer_notes.md     # Technical implementation details
-│   ├── directory_structure.md # This file - project layout
-│   ├── future_roadmap.md      # Development roadmap and plans
-│   ├── technical_status.md    # Current implementation status
-│   ├── user_guide.md         # End user documentation
-│   ├── user_guide.py         # Python examples and configurations
-│   └── user_interaction.md    # Interaction methods and protocols
-└── src/                      # Source code (implied)
-    ├── client/               # Client layer implementation
-    ├── communication/        # P2P network layer
-    ├── core/                # Core AGI components
-    └── storage/             # Distributed storage layer
+│   ├── api_reference.md
+│   ├── api_updates.md
+│   ├── architecture.md
+│   ├── developer_notes.md
+│   ├── directory_structure.md
+│   ├── future_roadmap.md
+│   ├── integration.md
+│   ├── project_overview.md
+│   ├── technical_status.md
+│   └── user_guide.md
+├── mobile_vAIn/
+│   ├── android/
+│   │   ├── P2PManager.java
+│   │   ├── P2PService.java
+│   │   └── ui/
+│   │       └── ChatAdapter.java
+│   ├── p2p/
+│   │   └── mobile_node.py
+│   └── ui/
+│       └── ChatActivity.java
+└── services/
+    └── p2p/
+        └── mobile_nodes/
+            └── android_integration.py
 ```
 
 ## Directory Overview
 
-### /docs
-Documentation files covering all aspects of the system:
-- API documentation and updates
-- Architecture specifications
-- User and developer guides
-- Technical status and roadmap
-- Implementation notes
+### /app
+- Mobile node implementation and core functionality
 
-### /src (implied)
-Source code organized by major system components:
-- **client/**: Frontend and user interface components
-- **communication/**: P2P networking and message passing
-- **core/**: Core AGI and federated learning systems
-- **storage/**: Distributed storage implementation
+### /docs
+- Comprehensive system documentation
+- API references and guides
+- Implementation details and architecture specifications
+
+### /mobile_vAIn
+- Mobile platform specific implementations
+- Android P2P networking and UI components
+- Mobile node base classes
+
+### /services
+- Core services implementation
+- P2P networking
+- Mobile node integration services
 
 ## Note
-This structure reflects the current state of the documented components. Additional directories and files may be added as the project evolves.
+This structure reflects the actual codebase with focus on mobile and P2P components.
 

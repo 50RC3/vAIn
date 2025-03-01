@@ -1,7 +1,7 @@
 from typing import List, Dict, Optional
 import asyncio
 from ..utils.security import SecureSession
-from ..config import NetworkConfig
+from ..config.network_config import NetworkConfig
 
 class P2PManager:
     def __init__(self, config: NetworkConfig):

@@ -35,7 +35,7 @@ class GRPCConnector:
             # Placeholder for actual message sending logic
             self.logger.info(f"Sending message: {message}")
             return True
-        except Exception as e:
+        except (grpc.RpcError, ConnectionError) as e:
             self.logger.error(f"Error sending message: {e}")
             return False
 

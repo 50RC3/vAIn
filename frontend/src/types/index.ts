@@ -1,3 +1,11 @@
+/**
+ * Represents a task entity in the application.
+ * @interface Task
+ * @property {string} id - The unique identifier for the task
+ * @property {string} title - The title or name of the task
+ * @property {string} status - The current status of the task
+ * @property {any} [key: string] - Additional dynamic properties that can be added to the task
+ */
 export interface Task {
   id: string;
   title: string;
