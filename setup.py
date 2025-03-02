@@ -1,5 +1,5 @@
 """
-Setup script for the mobile_vAIn package.
+Setup script for the mobile_vain package.
 """
 
 from setuptools import setup, find_packages
@@ -18,8 +18,10 @@ setup(
     package_data={
         "mobile_vain": ["py.typed"],
     },
-    provides_extra={
-        "mobile_vAIn": ["mobile_vain"],
-    },
+    # Use extras_require to define optional dependencies.
+    # For example, if later you want to offer extra features (e.g. a "dev" extra):
+    # extras_require={
+    #     "dev": ["pytest", "flake8"],
+    # },
     description="vAIn mobile node implementation (formerly mobile_vAIn)",
 )
