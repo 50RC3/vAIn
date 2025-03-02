@@ -18,7 +18,7 @@ Running unsupported versions exposes you to potential vulnerabilities. Please up
 Since vAIn is a solo project with no dedicated website, all security communications are handled directly by me. If you discover a vulnerability, please follow these guidelines:
 
 - **Contact Method:**  
-  Report the issue by emailing me at **your.email@example.com** (replace with your preferred contact address).
+  Report the issue by emailing me at **vjjvr.vincent@gmail.com** (replace with your preferred contact address).
 
 - **Response Time:**  
   I aim to acknowledge vulnerability reports within 48 hours and will provide updates every 5 business days until the issue is resolved. Response times may vary, as I manage all aspects of the project personally.
