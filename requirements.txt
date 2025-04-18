@@ -9,7 +9,7 @@ sqlalchemy==2.0.23
 redis==5.0.1
 
 # Machine Learning and Data Processing
-torch==2.2.0
+torch==2.6.0
 tensorflow==2.12.1
 scipy>=1.15.0  # Changed to use minimum version
 pandas==2.1.3
